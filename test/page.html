@@ -6,10 +6,32 @@
 <title>page for iframe api</title>
 </head>
 <body>
-    <h2>test page for iframe api</h2>
-    <p>IFrame this page into another website. Then communicate with the iframed page using JavaScript API.</p>
+  <h2>test page for iframe api</h2>
+  <p>IFrame this page into another website. Then communicate with the iframed page using JavaScript API.</p>
 
-    <script src="../src/md5.js"></script>
-    <script src="../src/iframe-api.js"></script>
+  <script src="../src/md5.js"></script>
+  <script src="../src/iframe-api.js"></script>
+  <script>
+    (function () {
+      if (typeof iframeApi === 'undefined') {
+        console.log('Cannot find iframeApi function, are we inside an iframe?');
+        return;
+      }
+
+      // this is what the external website can call
+      var api = {
+        bar: function (message) {
+          console.log('iframe: api.bar', message);
+        }
+      };
+      iframeApi(api, function (err, externalApi) {
+        if (err) {
+          throw new Error('Could not init external api ' + err);
+        }
+        console.log('iframe has external api object');
+        console.log(externalApi);
+      });
+    }());
+  </script>
 </body>
 </html>

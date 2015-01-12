@@ -46,8 +46,12 @@
       }
 
       function sendExternalApi(frameApi) {
+        console.assert(frameApi, 'missing frame api');
+
         if (externalApi) {
           console.log('sending external api back to the frame');
+          console.assert(typeof frameApi.api === 'function', 'missing frameApi.api', frameApi);
+
           frameApi.api({
             source: makeExternalApi.toString(),
             methodNames: Object.keys(externalApi)
@@ -58,6 +62,10 @@
       if (event.data.cmd === 'api') {
         frameApi = reviveApi(event.data);
         sendExternalApi(frameApi);
+
+        // we no longer need to api method
+        delete frameApi.api;
+
         setTimeout(function () {
           callback(null, frameApi);
         }, 0);
