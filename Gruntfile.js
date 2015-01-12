@@ -34,7 +34,8 @@ module.exports = function (grunt) {
       src: [
         'README.md',
         'src/*.js',
-        'test/index.html',
+        'index.html',
+        'test/page.html',
         'test/*.js'
       ]
     }
