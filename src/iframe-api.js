@@ -34,7 +34,11 @@
       console.log('received parent api');
       /* jshint -W061 */
       /* eslint no-eval:0 */
-      window.parentApi = eval('(' + arguments[0] + ')()');
+      var options = arguments[0];
+      la(typeof options === 'object', 'expected parent api options', options);
+      la(typeof options.source === 'string', 'cannot find source', options);
+      la(Array.isArray(options.source), 'cannot find method names', options);
+      window.parentApi = eval('(' + options.source + ')(options.methodNames)');
       console.log('you can make calls via parentApi object');
     },
     chart: function () {
