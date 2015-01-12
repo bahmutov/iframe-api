@@ -33,7 +33,7 @@
 
     // receives message (possibly from the iframe)
     function processMessage(event) {
-      console.log('parent received', event.data);
+      // console.log('parent received', event.data);
 
       function reviveApi(options) {
         console.log('received iframe API, MD5', options.md5);

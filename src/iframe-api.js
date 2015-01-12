@@ -25,23 +25,6 @@
 
   la(typeof md5 === 'function', 'cannot find md5 function');
 
-  // actual methods to control our web application
-  var commands = {
-    message: function () {
-      /* eslint no-alert:0 no-undef:0 */
-      alert(toArray(arguments).join(' '));
-    },
-    api: function () {
-
-    },
-    chart: function () {
-    }
-  };
-
-  // explain what each API method does
-  commands.message.help = 'Sends message to be displayed as a popup. api.message("hello", "world");';
-  commands.chart.help = 'Change to display chart, api.chart([1, 2, 3])';
-
   // this function recreates the API object from source
   // TODO combine with similar function in external api
   function reviveApi(returnPort, methodNames, methodHelps) {

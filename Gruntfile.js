@@ -1,6 +1,6 @@
 /*global module:false*/
 module.exports = function (grunt) {
-  var sourceFiles = ['src/*.js', '!src/md5.js'];
+  var sourceFiles = ['src/*.js', '!src/md5.js', 'utils/log-to.js'];
 
   grunt.initConfig({
 
@@ -36,7 +36,8 @@ module.exports = function (grunt) {
         'src/*.js',
         'index.html',
         'test/page.html',
-        'test/*.js'
+        'test/*.js',
+        'utils/log-to.js'
       ]
     }
   });

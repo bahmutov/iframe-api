@@ -2,17 +2,20 @@
 <html lang="en-us">
 
 <head>
-<meta charset="utf-8">
-<title>page for iframe api</title>
+  <meta charset="utf-8">
+  <title>page for iframe api</title>
 </head>
 <body>
   <h2>test page for iframe api</h2>
   <p>IFrame this page into another website. Then communicate with the iframed page using JavaScript API.</p>
 
+  <script src="../utils/log-to.js"></script>
+
   <script src="../src/md5.js"></script>
   <script src="../src/iframe-api.js"></script>
   <script>
     (function () {
+
       if (typeof iframeApi === 'undefined') {
         console.log('Cannot find iframeApi function, are we inside an iframe?');
         return;
@@ -29,7 +32,7 @@
           throw new Error('Could not init external api ' + err);
         }
         console.log('iframe has external api object');
-        console.log(externalApi);
+        console.log('api methods:', Object.keys(externalApi));
       });
     }());
   </script>
