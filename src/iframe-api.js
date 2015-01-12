@@ -22,6 +22,8 @@
     }
   }
 
+  la(typeof md5 === 'function', 'cannot find md5 function');
+
   // actual methods to control our web application
   var commands = {
     message: function () {
@@ -44,6 +46,7 @@
   commands.chart.help = 'Change to display chart, api.chart([1, 2, 3])';
 
   // this function recreates the API object from source
+  // TODO combine with similar function in external api
   function iframeApi(returnPort, methodNames, methodHelps) {
     function send(cmd) {
       returnPort.postMessage({

@@ -11,7 +11,23 @@
     with the website inside the iframe using an API object</p>
 
     <script src="src/external-api.js"></script>
-    <iframe id="page" src="http://glebbahmutov.com/iframe-api/test/page.html" width="100%" height="700"></iframe>
+
+    <script>
+    var myMethods = {
+      foo: function () {
+        console.log('myMethods.foo called');
+      }
+    };
+    iframeApi(myMethods, function (err, api) {
+      if (err) {
+        throw new Error('iframeApi error ' + err);
+      }
+      console.log('received api from iframe');
+      console.log(api);
+    });
+    </script>
+
+    <iframe id="page" src="http://glebbahmutov.com/iframe-api/test/page.html" width="100%" height="500"></iframe>
 
 </body>
 </html>
