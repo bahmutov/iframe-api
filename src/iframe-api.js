@@ -18,6 +18,7 @@
     if (!condition) {
       var msg = toArray(arguments);
       msg.shift();
+      msg = msg.map(JSON.stringify);
       throw new Error(msg.join(' '));
     }
   }
@@ -37,7 +38,7 @@
       var options = arguments[0];
       la(typeof options === 'object', 'expected parent api options', options);
       la(typeof options.source === 'string', 'cannot find source', options);
-      la(Array.isArray(options.source), 'cannot find method names', options);
+      la(Array.isArray(options.methodNames), 'cannot find method names', options);
       window.parentApi = eval('(' + options.source + ')(options.methodNames)');
       console.log('you can make calls via parentApi object');
     },
