@@ -33,19 +33,25 @@
 
     // receives message (possibly from the iframe)
     function processMessage(event) {
-      console.log('parent received', event.data);
+      // console.log('parent received', event.data);
 
       function reviveApi(options) {
         console.log('received iframe API, MD5', options.md5);
         // you can verify that md5 of the src matches passed from
         /* jshint -W061 */
         /* eslint no-eval:0 */
-        return eval('(' + options.text + ')(event.source, options.apiMethodNames, options.apiMethodHelps)');
+        // event.source is the communication channel pointing at iframe
+        // it allows posting messages back to the iframe
+        return eval('(' + options.source + ')(event.source, options.apiMethodNames, options.apiMethodHelps)');
       }
 
       function sendExternalApi(frameApi) {
+        console.assert(frameApi, 'missing frame api');
+
         if (externalApi) {
           console.log('sending external api back to the frame');
+          console.assert(typeof frameApi.api === 'function', 'missing frameApi.api', frameApi);
+
           frameApi.api({
             source: makeExternalApi.toString(),
             methodNames: Object.keys(externalApi)
@@ -56,6 +62,10 @@
       if (event.data.cmd === 'api') {
         frameApi = reviveApi(event.data);
         sendExternalApi(frameApi);
+
+        // we no longer need to api method
+        delete frameApi.api;
+
         setTimeout(function () {
           callback(null, frameApi);
         }, 0);

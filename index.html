@@ -10,6 +10,7 @@
     <p>This page includes another website using iframe. This page (let us call it <em>external</em> page) can communicate
     with the website inside the iframe using an API object</p>
 
+    <script src="utils/log-to.js"></script>
     <script src="src/external-api.js"></script>
 
     <script>
@@ -23,11 +24,14 @@
         throw new Error('iframeApi error ' + err);
       }
       console.log('received api from iframe');
-      console.log(api);
+      console.log('api methods:', Object.keys(api));
     });
     </script>
 
     <iframe id="page" src="http://glebbahmutov.com/iframe-api/test/page.html" width="100%" height="500"></iframe>
+    <!--
+    <iframe id="page" src="http://localhost:3003/test/page.html" width="100%" height="500"></iframe>
+    -->
 
 </body>
 </html>
