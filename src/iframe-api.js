@@ -93,7 +93,7 @@
 
     parent.postMessage({
       cmd: 'api',
-      text: apiSource,
+      source: apiSource,
       md5: md5(apiSource),
       apiMethodNames: apiMethodNames,
       apiMethodHelps: apiMethodHelps

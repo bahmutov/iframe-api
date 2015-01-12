@@ -40,7 +40,9 @@
         // you can verify that md5 of the src matches passed from
         /* jshint -W061 */
         /* eslint no-eval:0 */
-        return eval('(' + options.text + ')(event.source, options.apiMethodNames, options.apiMethodHelps)');
+        // event.source is the communication channel pointing at iframe
+        // it allows posting messages back to the iframe
+        return eval('(' + options.source + ')(event.source, options.apiMethodNames, options.apiMethodHelps)');
       }
 
       function sendExternalApi(frameApi) {

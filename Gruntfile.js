@@ -7,7 +7,7 @@ module.exports = function (grunt) {
     jshint: {
       all: sourceFiles,
       options: {
-        jshintrc: '.jshintrc',
+        jshintrc: 'utils/.jshintrc',
         reporter: require('jshint-summary')
       }
     },
@@ -15,7 +15,7 @@ module.exports = function (grunt) {
     eslint: {
       target: sourceFiles,
       options: {
-        config: 'eslint.json',
+        config: 'utils/eslint.json',
         rulesdir: ['./node_modules/eslint-rules']
       }
     },
@@ -23,7 +23,7 @@ module.exports = function (grunt) {
     jscs: {
       src: sourceFiles,
       options: {
-        config: 'jscs.json'
+        config: 'utils/jscs.json'
       }
     },
 
