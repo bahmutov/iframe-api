@@ -14,10 +14,15 @@
     <button id="btn" style="display:none">Call iframe API method</button>
 
     <script src="utils/log-to.js"></script>
-    <script src="src/external-api.js"></script>
+
+    <script src="dist/external-api.js"></script>
 
     <script>
-    (function iframeApiHandshake() {
+    (function iframeApiHandshake(iframeApi) {
+
+      if (typeof iframeApi !== 'function') {
+        throw new Error('Missing iframeApi function');
+      }
 
       var myMethods = {
         foo: function (arg) {
@@ -26,14 +31,21 @@
         },
         baz: function () {
           console.log('myMethods.baz()');
-        }
+        },
+        version: '1.0.0'
       };
 
-      iframeApi(myMethods, function (err, api) {
+      var options = {
+        // true - verify received md5 against decalred.
+        // string - compute and compare md5 to the given string
+        md5: true
+      };
+
+      function connected(err, api) {
         if (err) {
           throw new Error('iframeApi error ' + err);
         }
-        console.log('received api from iframe');
+        console.log('received api from iframe with version', api.version);
         console.log('api methods:', Object.keys(api));
 
         var btn = document.getElementById('btn');
@@ -42,8 +54,10 @@
           api.bar('hi from external site');
         });
         btn.style.display = '';
-      });
-    }());
+      }
+
+      iframeApi(myMethods, connected, options);
+    }(window.iframeApi));
     </script>
 
     <iframe id="page" src="test/page.html" width="100%" height="500"></iframe>

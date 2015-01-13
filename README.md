@@ -17,12 +17,13 @@ Available on NPM and bower under name `iframe-api`.
 **external website** (index.html)
 
 ```html
-<script src="iframe-api/src/external-api.js"></script>
+<script src="iframe-api/dist/external-api.js"></script>
 <script>
 var myMethods = {
   foo: function (arg) {
     console.log('myMethods.foo called wtih argument', arg);
-  }
+  },
+  version: '0.1.0' // primitive values are also allowed
 };
 iframeApi(myMethods, function (err, api) {
   api.bar(); // or whatever methods iframed website exposes
@@ -34,7 +35,7 @@ iframeApi(myMethods, function (err, api) {
 **iframed website** (iframed.html)
 
 ```html
-<script src="iframe-api/src/iframe-api.js"></script>
+<script src="iframe-api/dist/iframe-api.js"></script>
 <script>
 var api = {
   bar: function (message) {
@@ -50,11 +51,17 @@ iframeApi(api, function (err, externalApi) {
 **event sequence**
 
 * iframe element loads `iframed.html`
-* iframed website loads [src/iframe-api.js](src/iframe-api.js)
+* iframed website loads script built from [src/iframe-api.js](src/iframe-api.js)
 * iframed website executed `iframeApi` that posts a message to the parent
     - the payload includes iframe's serialized object `api`
 * external website gets the `api` object and makes a call `api.bar()`
 * iframed website makes call to the external website using `externalApi.foo` method.
+
+The websites communicate by calling methods on the returned api object, underneath
+the we use `window.postMessage`. The iframed website initiates the contact because it knows
+when it has been loaded and ready to communicate.
+
+![iframe-api](images/iframe-api-boundary.png)
 
 ### Small print
 

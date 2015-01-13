@@ -193,3 +193,5 @@ if (md5('hello') != '5d41402abc4b2a76b9719d911017c592') {
         return (msw << 16) | (lsw & 0xFFFF);
     }
 }
+
+module.exports = md5;

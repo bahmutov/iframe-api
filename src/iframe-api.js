@@ -1,62 +1,46 @@
 // to be run from <iframe src="..." ...></iframe>
-(function (md5) {
 
-  function isIframed() {
-    return parent !== window;
-  }
+function isIframed() {
+  return parent !== window;
+}
 
-  if (!isIframed()) {
-    // nothing to do, we are not inside an iframe
-    return;
-  }
-
-  function toArray(list) {
-    return Array.prototype.slice.call(list, 0);
-  }
-
-  function la(condition) {
-    if (!condition) {
-      var msg = toArray(arguments);
-      msg.shift();
-      msg = msg.map(JSON.stringify);
-      throw new Error(msg.join(' '));
-    }
-  }
-
-  la(typeof md5 === 'function', 'cannot find md5 function');
+if (isIframed()) {
+  var la = require('./la');
 
   // this function recreates the API object from source
   // TODO combine with similar function in external api
-  function reviveApi(returnPort, methodNames, methodHelps) {
-    function send(cmd) {
-      returnPort.postMessage({
-        cmd: cmd,
-        args: Array.prototype.slice.call(arguments, 1)
-      }, '*');
-    }
-    var api = {};
-    methodNames.forEach(function (name) {
-      api[name] = send.bind(null, name);
-      if (methodHelps[name]) {
-        api[name].help = methodHelps[name];
-      }
-    });
+  var reviveApi = require('./revive-api');
+  la(typeof reviveApi === 'function', 'missing revive api function');
 
-    return api;
-  }
+  var removeWhiteSpace = require('./minify');
 
-  function removeWhiteSpace(src) {
-    la(src, 'missing source', src);
-    return src.replace(/\s{2,}/g, '');
-  }
-
-  function iframeApi(commands, callback) {
+  var iframeApi = function iframeApi(commands, callback, options) {
     console.log('creating iframe api');
 
     if (typeof commands === 'function') {
       callback = commands;
       commands = null;
     }
+    la(typeof callback === 'function', 'need callback function');
+
+    var receivedExternalApi = function receivedExternalApi(received) {
+      /* jshint -W061 */
+      /* eslint no-eval:0 */
+      la(typeof received === 'object', 'expected parent api options', received);
+      la(typeof received.source === 'string', 'cannot find source', received);
+      la(Array.isArray(received.methodNames), 'cannot find method names', received);
+      la(typeof received.values === 'object', 'cannot find api property values', received);
+
+      var verifyMd5 = require('./verify-md5');
+      verifyMd5(options, received);
+
+      var api = eval('(' + received.source + ')(parent, received.methodNames, received.values)');
+
+      console.log('got an api to the external site');
+      setTimeout(function () {
+        callback(null, api);
+      }, 0);
+    };
 
     function messageToApi(e) {
       if (!e.data || !e.data.cmd) {
@@ -65,18 +49,7 @@
       }
 
       if (e.data.cmd === 'api') {
-        console.log('received parent api');
-        /* jshint -W061 */
-        /* eslint no-eval:0 */
-        var options = e.data.args[0];
-        la(typeof options === 'object', 'expected parent api options', options);
-        la(typeof options.source === 'string', 'cannot find source', options);
-        la(Array.isArray(options.methodNames), 'cannot find method names', options);
-        var api = eval('(' + options.source + ')(options.methodNames)');
-        console.log('got an api to the external site');
-        setTimeout(function () {
-          callback(null, api);
-        }, 0);
+        receivedExternalApi(e.data.args[0]);
         return;
       }
 
@@ -91,6 +64,8 @@
       }
     }
 
+    var md5 = require('./md5');
+    la(typeof md5 === 'function', 'cannot find md5 function');
     window.onmessage = messageToApi;
 
     la(isIframed(), 'not iframed');
@@ -102,9 +77,16 @@
       var apiSource = reviveApi.toString();
       var apiMethodNames = Object.keys(commands);
       var apiMethodHelps = {};
+      // values for non-methods
+      var values = {};
+
       apiMethodNames.forEach(function (name) {
         var fn = commands[name];
-        apiMethodHelps[name] = fn.help;
+        if (typeof fn === 'function') {
+          apiMethodHelps[name] = fn.help;
+        } else {
+          values[name] = commands[name];
+        }
       });
 
       apiSource = removeWhiteSpace(apiSource);
@@ -116,11 +98,11 @@
         source: apiSource,
         md5: md5(apiSource),
         apiMethodNames: apiMethodNames,
-        apiMethodHelps: apiMethodHelps
+        apiMethodHelps: apiMethodHelps,
+        values: values
       }, '*');
     }
+  };
 
-  }
-  window.iframeApi = iframeApi;
-
-}(window.md5));
+  module.exports = iframeApi;
+}

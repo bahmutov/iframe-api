@@ -2,87 +2,94 @@
 // installs api object that can be used to execute code
 // in iframe's context
 
-(function initIframeApi() {
+var md5 = require('./md5');
+var la = require('./la');
+la(typeof md5 === 'function', 'cannot find md5 function');
 
-  /* global console */
+var makeExternalApi = require('./revive-api');
 
-  function makeExternalApi(methodNames) {
-    function send(cmd) {
-      // parent is the window element from iframe
-      parent.postMessage({
-        cmd: cmd,
-        args: Array.prototype.slice.call(arguments, 1)
-      }, '*');
-    }
-    var api = {};
-    methodNames.forEach(function (name) {
-      api[name] = send.bind(null, name);
-    });
-    return api;
+function iframeApi(externalApi, callback, options) {
+  if (typeof externalApi === 'function') {
+    options = callback;
+    callback = externalApi;
+    externalApi = null;
   }
+  options = options || {};
 
-  function iframeApi(externalApi, callback, options) {
-    if (typeof externalApi === 'function') {
-      options = callback;
-      callback = externalApi;
-      externalApi = null;
+  var frameApi;
+
+  var verifyMd5 = require('./verify-md5');
+  var removeWhiteSpace = require('./minify');
+
+  // receives message (possibly from the iframe)
+  function processMessage(event) {
+
+    function reviveApi(opts) {
+      verifyMd5(options, opts);
+
+      /* jshint -W061 */
+      /* eslint no-eval:0 */
+      // event.source is the communication channel pointing at iframe
+      // it allows posting messages back to the iframe
+      return eval('(' + opts.source +
+        ')(event.source, opts.apiMethodNames, opts.values, opts.apiMethodHelps)');
     }
-    options = options || {};
 
-    var frameApi;
+    function sendExternalApi(frameApi) {
+      console.assert(frameApi, 'missing frame api');
 
-    // receives message (possibly from the iframe)
-    function processMessage(event) {
-      // console.log('parent received', event.data);
+      if (externalApi) {
+        console.log('sending external api back to the frame');
+        console.assert(typeof frameApi.api === 'function', 'missing frameApi.api', frameApi);
 
-      function reviveApi(options) {
-        console.log('received iframe API, MD5', options.md5);
-        // you can verify that md5 of the src matches passed from
-        /* jshint -W061 */
-        /* eslint no-eval:0 */
-        // event.source is the communication channel pointing at iframe
-        // it allows posting messages back to the iframe
-        return eval('(' + options.source + ')(event.source, options.apiMethodNames, options.apiMethodHelps)');
+        var methodNames = Object.keys(externalApi);
+        var source = makeExternalApi.toString();
+        source = removeWhiteSpace(source);
+
+        var values = {};
+        methodNames.forEach(function (name) {
+          if (typeof externalApi[name] !== 'function') {
+            values[name] = externalApi[name];
+          }
+        });
+
+        frameApi.api({
+          source: source,
+          md5: md5(source),
+          methodNames: methodNames,
+          values: values
+        });
       }
+    }
 
-      function sendExternalApi(frameApi) {
-        console.assert(frameApi, 'missing frame api');
-
-        if (externalApi) {
-          console.log('sending external api back to the frame');
-          console.assert(typeof frameApi.api === 'function', 'missing frameApi.api', frameApi);
-
-          frameApi.api({
-            source: makeExternalApi.toString(),
-            methodNames: Object.keys(externalApi)
-          });
-        }
-      }
-
-      if (event.data.cmd === 'api') {
+    if (event.data.cmd === 'api') {
+      try {
         frameApi = reviveApi(event.data);
         sendExternalApi(frameApi);
-
         // we no longer need to api method
         delete frameApi.api;
-
         setTimeout(function () {
           callback(null, frameApi);
         }, 0);
-        return;
+      } catch (err) {
+        setTimeout(function () {
+          callback(err);
+        }, 0);
       }
 
-      if (externalApi) {
-        var method = externalApi[event.data.cmd];
-        if (typeof method === 'function') {
-          // parent has a method iframe is trying to call
-          method.apply(externalApi, event.data.args);
-        }
-      }
+      return;
     }
 
-    window.onmessage = processMessage;
+    if (externalApi) {
+      var method = externalApi[event.data.cmd];
+      if (typeof method === 'function') {
+        // parent has a method iframe is trying to call
+        method.apply(externalApi, event.data.args);
+      }
+    }
   }
 
-  window.iframeApi = iframeApi;
-}());
+  window.onmessage = processMessage;
+}
+
+module.exports = iframeApi;
