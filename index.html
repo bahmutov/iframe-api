@@ -2,8 +2,9 @@
 <html lang="en-us">
 
 <head>
-<meta charset="utf-8">
-<title>iframe api</title>
+  <meta charset="utf-8">
+  <title>iframe api</title>
+  <script src="bower_components/es5-shim/es5-shim.js"></script>
 </head>
 <body>
     <h2>iframe api</h2>
@@ -19,8 +20,12 @@
     (function iframeApiHandshake() {
 
       var myMethods = {
-        foo: function () {
-          console.log('myMethods.foo called');
+        foo: function (arg) {
+          console.log('myMethods.foo called wtih argument', arg);
+          this.baz();
+        },
+        baz: function () {
+          console.log('myMethods.baz()');
         }
       };
 
@@ -34,7 +39,7 @@
         var btn = document.getElementById('btn');
         btn.addEventListener('click', function () {
           console.log('button clicked, calling method via iframe api');
-          api.bar();
+          api.bar('hi from external site');
         });
         btn.style.display = '';
       });
