@@ -14,13 +14,33 @@ if (isIframed()) {
 
   var removeWhiteSpace = require('./minify');
 
-  var iframeApi = function iframeApi(commands, callback) {
+  var iframeApi = function iframeApi(commands, callback, options) {
     console.log('creating iframe api');
 
     if (typeof commands === 'function') {
       callback = commands;
       commands = null;
     }
+    la(typeof callback === 'function', 'need callback function');
+
+    var receivedExternalApi = function receivedExternalApi(received) {
+      /* jshint -W061 */
+      /* eslint no-eval:0 */
+      la(typeof received === 'object', 'expected parent api options', received);
+      la(typeof received.source === 'string', 'cannot find source', received);
+      la(Array.isArray(received.methodNames), 'cannot find method names', received);
+      la(typeof received.values === 'object', 'cannot find api property values', received);
+
+      var verifyMd5 = require('./verify-md5');
+      verifyMd5(options, received);
+
+      var api = eval('(' + received.source + ')(parent, received.methodNames, received.values)');
+
+      console.log('got an api to the external site');
+      setTimeout(function () {
+        callback(null, api);
+      }, 0);
+    };
 
     function messageToApi(e) {
       if (!e.data || !e.data.cmd) {
@@ -29,21 +49,7 @@ if (isIframed()) {
       }
 
       if (e.data.cmd === 'api') {
-        var options = e.data.args[0];
-        console.log('received parent api with MD5', options.md5);
-
-        /* jshint -W061 */
-        /* eslint no-eval:0 */
-        la(typeof options === 'object', 'expected parent api options', options);
-        la(typeof options.source === 'string', 'cannot find source', options);
-        la(Array.isArray(options.methodNames), 'cannot find method names', options);
-        la(typeof options.values === 'object', 'cannot find api property values', options);
-
-        var api = eval('(' + options.source + ')(options.methodNames, options.values)');
-        console.log('got an api to the external site');
-        setTimeout(function () {
-          callback(null, api);
-        }, 0);
+        receivedExternalApi(e.data.args[0]);
         return;
       }
 

@@ -1,4 +1,7 @@
 function reviveApi(returnPort, methodNames, values, methodHelps) {
+  values = values || {};
+  methodHelps = methodHelps || {};
+
   function send(cmd) {
     returnPort.postMessage({
       cmd: cmd,

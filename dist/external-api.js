@@ -5,27 +5,9 @@
 
 var md5 = require('./md5');
 var la = require('./la');
-
 la(typeof md5 === 'function', 'cannot find md5 function');
 
-function makeExternalApi(methodNames, values) {
-  function send(cmd) {
-    // parent is the window element from iframe
-    parent.postMessage({
-      cmd: cmd,
-      args: Array.prototype.slice.call(arguments, 1)
-    }, '*');
-  }
-  var api = {};
-  methodNames.forEach(function (name) {
-    if (typeof values[name] !== 'undefined') {
-      api[name] = values[name];
-    } else {
-      api[name] = send.bind(null, name);
-    }
-  });
-  return api;
-}
+var makeExternalApi = require('./revive-api');
 
 function iframeApi(externalApi, callback, options) {
   if (typeof externalApi === 'function') {
@@ -37,26 +19,14 @@ function iframeApi(externalApi, callback, options) {
 
   var frameApi;
 
-  function verifyMd5(opts) {
-    console.log('received iframe API, MD5', opts.md5);
-    // you can verify that md5 of the src matches passed from
-    var computedMD5;
-    if (typeof options.md5 === 'boolean' && options.md5) {
-      computedMD5 = md5(opts.source);
-      la(computedMD5 === opts.md5,
-        'computed MD5', computedMD5, 'does not match specified', opts.md5);
-    } else if (typeof options.md5 === 'string') {
-      computedMD5 = md5(opts.source);
-      la(computedMD5 === options.md5,
-        'computed MD5', computedMD5, 'does not match required', options.md5);
-    }
-  }
+  var verifyMd5 = require('./verify-md5');
+  var removeWhiteSpace = require('./minify');
 
   // receives message (possibly from the iframe)
   function processMessage(event) {
 
     function reviveApi(opts) {
-      verifyMd5(opts);
+      verifyMd5(options, opts);
 
       /* jshint -W061 */
       /* eslint no-eval:0 */
@@ -75,6 +45,8 @@ function iframeApi(externalApi, callback, options) {
 
         var methodNames = Object.keys(externalApi);
         var source = makeExternalApi.toString();
+        source = removeWhiteSpace(source);
+
         var values = {};
         methodNames.forEach(function (name) {
           if (typeof externalApi[name] !== 'function') {
@@ -123,7 +95,7 @@ function iframeApi(externalApi, callback, options) {
 
 module.exports = iframeApi;
 
-},{"./la":2,"./md5":3}],2:[function(require,module,exports){
+},{"./la":2,"./md5":3,"./minify":4,"./revive-api":5,"./verify-md5":7}],2:[function(require,module,exports){
 var toArray = require('./to-array');
 
 function la(condition) {
@@ -137,7 +109,7 @@ function la(condition) {
 
 module.exports = la;
 
-},{"./to-array":4}],3:[function(require,module,exports){
+},{"./to-array":6}],3:[function(require,module,exports){
 // utility - MD5 computation from
 var md5 = (function md5init() {
 
@@ -337,10 +309,69 @@ if (md5('hello') != '5d41402abc4b2a76b9719d911017c592') {
 module.exports = md5;
 
 },{}],4:[function(require,module,exports){
+var la = require('./la');
+function removeWhiteSpace(src) {
+  la(src, 'missing source', src);
+  return src.replace(/\s{2,}/g, '');
+}
+
+module.exports = removeWhiteSpace;
+
+},{"./la":2}],5:[function(require,module,exports){
+function reviveApi(returnPort, methodNames, values, methodHelps) {
+  values = values || {};
+  methodHelps = methodHelps || {};
+
+  function send(cmd) {
+    returnPort.postMessage({
+      cmd: cmd,
+      args: Array.prototype.slice.call(arguments, 1)
+    }, '*');
+  }
+  var api = {};
+  methodNames.forEach(function (name) {
+    if (values[name]) {
+      api[name] = values[name];
+    } else {
+      api[name] = send.bind(null, name);
+    }
+    if (methodHelps[name]) {
+      api[name].help = methodHelps[name];
+    }
+  });
+
+  return api;
+}
+
+module.exports = reviveApi;
+
+},{}],6:[function(require,module,exports){
 function toArray(list) {
   return Array.prototype.slice.call(list, 0);
 }
 module.exports = toArray;
 
-},{}]},{},[1])(1)
+},{}],7:[function(require,module,exports){
+var la = require('./la');
+var md5 = require('./md5');
+
+function verifyMd5(options, received) {
+  options = options || {};
+  received = received || {};
+
+  var computedMD5;
+  if (typeof options.md5 === 'boolean' && options.md5) {
+    computedMD5 = md5(received.source);
+    la(computedMD5 === received.md5,
+      'computed MD5', computedMD5, 'does not match specified', received.md5);
+  } else if (typeof options.md5 === 'string') {
+    computedMD5 = md5(received.source);
+    la(computedMD5 === options.md5,
+      'computed MD5', computedMD5, 'does not match required', options.md5);
+  }
+}
+
+module.exports = verifyMd5;
+
+},{"./la":2,"./md5":3}]},{},[1])(1)
 });
