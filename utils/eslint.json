@@ -19,7 +19,7 @@
     "no-underscore-dangle": 1,
     "quotes": [2, "single"],
     "brace-style": [2, "1tbs"],
-    "eol-last": 1,
+    "eol-last": 2,
     "semi": [2, "always"],
     "no-extra-strict": 0,
     "no-single-line-objects": 2,

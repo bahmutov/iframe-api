@@ -50,19 +50,33 @@
 
     var frameApi;
 
+    function verifyMd5(opts) {
+      console.log('received iframe API, MD5', opts.md5);
+      // you can verify that md5 of the src matches passed from
+      var computedMD5;
+      if (typeof options.md5 === 'boolean' && options.md5) {
+        computedMD5 = md5(opts.source);
+        la(computedMD5 === opts.md5,
+          'computed MD5', computedMD5, 'does not match specified', opts.md5);
+      } else if (typeof options.md5 === 'string') {
+        computedMD5 = md5(opts.source);
+        la(computedMD5 === options.md5,
+          'computed MD5', computedMD5, 'does not match required', options.md5);
+      }
+    }
+
     // receives message (possibly from the iframe)
     function processMessage(event) {
-      // console.log('parent received', event.data);
 
-      function reviveApi(options) {
-        console.log('received iframe API, MD5', options.md5);
-        // you can verify that md5 of the src matches passed from
+      function reviveApi(opts) {
+        verifyMd5(opts);
+
         /* jshint -W061 */
         /* eslint no-eval:0 */
         // event.source is the communication channel pointing at iframe
         // it allows posting messages back to the iframe
-        return eval('(' + options.source +
-          ')(event.source, options.apiMethodNames, options.values, options.apiMethodHelps)');
+        return eval('(' + opts.source +
+          ')(event.source, opts.apiMethodNames, opts.values, opts.apiMethodHelps)');
       }
 
       function sendExternalApi(frameApi) {
@@ -91,15 +105,20 @@
       }
 
       if (event.data.cmd === 'api') {
-        frameApi = reviveApi(event.data);
-        sendExternalApi(frameApi);
+        try {
+          frameApi = reviveApi(event.data);
+          sendExternalApi(frameApi);
+          // we no longer need to api method
+          delete frameApi.api;
+          setTimeout(function () {
+            callback(null, frameApi);
+          }, 0);
+        } catch (err) {
+          setTimeout(function () {
+            callback(err);
+          }, 0);
+        }
 
-        // we no longer need to api method
-        delete frameApi.api;
-
-        setTimeout(function () {
-          callback(null, frameApi);
-        }, 0);
         return;
       }
 
