@@ -27,6 +27,15 @@ module.exports = function (grunt) {
       }
     },
 
+    'clean-console': {
+      test: {
+        options: {
+          url: 'index.html',
+          timeout: 5 // seconds to wait for any errors
+        }
+      }
+    },
+
     'gh-pages': {
       options: {
         base: '.'
@@ -46,5 +55,6 @@ module.exports = function (grunt) {
   plugins.forEach(grunt.loadNpmTasks);
 
   grunt.registerTask('lint', ['jshint', 'eslint', 'jscs']);
-  grunt.registerTask('default', ['deps-ok', 'nice-package', 'lint', 'sync']);
+  grunt.registerTask('test', ['clean-console']);
+  grunt.registerTask('default', ['deps-ok', 'nice-package', 'lint', 'sync', 'test']);
 };
