@@ -5,6 +5,7 @@
   logTo.style.width = '100%';
   logTo.style.minHeight = '200px';
   logTo.style.fontFamily = 'monospace';
+  logTo.style.marginTop = '20px';
   document.body.appendChild(logTo);
 
   function toString(x) {

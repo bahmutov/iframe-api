@@ -9,13 +9,14 @@
   <h2>test page for iframe api</h2>
   <p>IFrame this page into another website. Then communicate with the iframed page using JavaScript API.</p>
 
+  <button id="btn" style="display:none">Call external API method</button>
+
   <script src="../utils/log-to.js"></script>
 
   <script src="../src/md5.js"></script>
   <script src="../src/iframe-api.js"></script>
   <script>
-    (function () {
-
+    (function apiHandshake() {
       if (typeof iframeApi === 'undefined') {
         console.log('Cannot find iframeApi function, are we inside an iframe?');
         return;
@@ -33,6 +34,13 @@
         }
         console.log('iframe has external api object');
         console.log('api methods:', Object.keys(externalApi));
+
+        var btn = document.getElementById('btn');
+        btn.addEventListener('click', function () {
+          console.log('button clicked, calling method on external api');
+          externalApi.foo();
+        });
+        btn.style.display = '';
       });
     }());
   </script>
