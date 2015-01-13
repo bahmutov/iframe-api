@@ -44,6 +44,7 @@ module.exports = function (grunt) {
         'README.md',
         'src/*.js',
         'index.html',
+        'bower_components/es5-shim/es5-shim.js',
         'test/page.html',
         'test/*.js',
         'utils/log-to.js'
