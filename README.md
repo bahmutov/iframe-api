@@ -17,8 +17,7 @@ Available on NPM and bower under name `iframe-api`.
 **external website** (index.html)
 
 ```html
-<script src="iframe-api/src/md5.js"></script>
-<script src="iframe-api/src/external-api.js"></script>
+<script src="iframe-api/dist/external-api.js"></script>
 <script>
 var myMethods = {
   foo: function (arg) {
@@ -36,8 +35,7 @@ iframeApi(myMethods, function (err, api) {
 **iframed website** (iframed.html)
 
 ```html
-<script src="iframe-api/src/md5.js"></script>
-<script src="iframe-api/src/iframe-api.js"></script>
+<script src="iframe-api/dist/iframe-api.js"></script>
 <script>
 var api = {
   bar: function (message) {
@@ -53,7 +51,7 @@ iframeApi(api, function (err, externalApi) {
 **event sequence**
 
 * iframe element loads `iframed.html`
-* iframed website loads [src/iframe-api.js](src/iframe-api.js)
+* iframed website loads script built from [src/iframe-api.js](src/iframe-api.js)
 * iframed website executed `iframeApi` that posts a message to the parent
     - the payload includes iframe's serialized object `api`
 * external website gets the `api` object and makes a call `api.bar()`

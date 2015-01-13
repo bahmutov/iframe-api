@@ -1,3 +1,122 @@
+!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.iframeApi=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+// to be run from <iframe src="..." ...></iframe>
+
+function isIframed() {
+  return parent !== window;
+}
+
+if (isIframed()) {
+  var la = require('./la');
+
+  // this function recreates the API object from source
+  // TODO combine with similar function in external api
+  var reviveApi = require('./revive-api');
+  la(typeof reviveApi === 'function', 'missing revive api function');
+
+  var removeWhiteSpace = require('./minify');
+
+  var iframeApi = function iframeApi(commands, callback) {
+    console.log('creating iframe api');
+
+    if (typeof commands === 'function') {
+      callback = commands;
+      commands = null;
+    }
+
+    function messageToApi(e) {
+      if (!e.data || !e.data.cmd) {
+        console.error('invalid message received by the iframe API', e.data);
+        return;
+      }
+
+      if (e.data.cmd === 'api') {
+        var options = e.data.args[0];
+        console.log('received parent api with MD5', options.md5);
+
+        /* jshint -W061 */
+        /* eslint no-eval:0 */
+        la(typeof options === 'object', 'expected parent api options', options);
+        la(typeof options.source === 'string', 'cannot find source', options);
+        la(Array.isArray(options.methodNames), 'cannot find method names', options);
+        la(typeof options.values === 'object', 'cannot find api property values', options);
+
+        var api = eval('(' + options.source + ')(options.methodNames, options.values)');
+        console.log('got an api to the external site');
+        setTimeout(function () {
+          callback(null, api);
+        }, 0);
+        return;
+      }
+
+      if (commands) {
+        var method = commands[e.data.cmd];
+        if (typeof method === 'function') {
+          var args = Array.isArray(e.data.args) ? e.data.args : [];
+          method.apply(commands, args);
+        } else {
+          console.log('unknown command', e.data.cmd, 'from the parent', e.data.cmd);
+        }
+      }
+    }
+
+    var md5 = require('./md5');
+    la(typeof md5 === 'function', 'cannot find md5 function');
+    window.onmessage = messageToApi;
+
+    la(isIframed(), 'not iframed');
+
+    if (commands) {
+      // placeholder for API method to send parent's api back to iframe
+      commands.api = function () {};
+
+      var apiSource = reviveApi.toString();
+      var apiMethodNames = Object.keys(commands);
+      var apiMethodHelps = {};
+      // values for non-methods
+      var values = {};
+
+      apiMethodNames.forEach(function (name) {
+        var fn = commands[name];
+        if (typeof fn === 'function') {
+          apiMethodHelps[name] = fn.help;
+        } else {
+          values[name] = commands[name];
+        }
+      });
+
+      apiSource = removeWhiteSpace(apiSource);
+
+      // TODO(gleb): validate that api source can be recreated back
+
+      parent.postMessage({
+        cmd: 'api',
+        source: apiSource,
+        md5: md5(apiSource),
+        apiMethodNames: apiMethodNames,
+        apiMethodHelps: apiMethodHelps,
+        values: values
+      }, '*');
+    }
+  };
+
+  module.exports = iframeApi;
+}
+
+},{"./la":2,"./md5":3,"./minify":4,"./revive-api":5}],2:[function(require,module,exports){
+var toArray = require('./to-array');
+
+function la(condition) {
+  if (!condition) {
+    var msg = toArray(arguments);
+    msg.shift();
+    msg = msg.map(JSON.stringify);
+    throw new Error(msg.join(' '));
+  }
+}
+
+module.exports = la;
+
+},{"./to-array":6}],3:[function(require,module,exports){
 // utility - MD5 computation from
 var md5 = (function md5init() {
 
@@ -195,3 +314,46 @@ if (md5('hello') != '5d41402abc4b2a76b9719d911017c592') {
 }
 
 module.exports = md5;
+
+},{}],4:[function(require,module,exports){
+var la = require('./la');
+function removeWhiteSpace(src) {
+  la(src, 'missing source', src);
+  return src.replace(/\s{2,}/g, '');
+}
+
+module.exports = removeWhiteSpace;
+
+},{"./la":2}],5:[function(require,module,exports){
+function reviveApi(returnPort, methodNames, values, methodHelps) {
+  function send(cmd) {
+    returnPort.postMessage({
+      cmd: cmd,
+      args: Array.prototype.slice.call(arguments, 1)
+    }, '*');
+  }
+  var api = {};
+  methodNames.forEach(function (name) {
+    if (values[name]) {
+      api[name] = values[name];
+    } else {
+      api[name] = send.bind(null, name);
+    }
+    if (methodHelps[name]) {
+      api[name].help = methodHelps[name];
+    }
+  });
+
+  return api;
+}
+
+module.exports = reviveApi;
+
+},{}],6:[function(require,module,exports){
+function toArray(list) {
+  return Array.prototype.slice.call(list, 0);
+}
+module.exports = toArray;
+
+},{}]},{},[1])(1)
+});

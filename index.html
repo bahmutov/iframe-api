@@ -15,11 +15,14 @@
 
     <script src="utils/log-to.js"></script>
 
-    <script src="src/md5.js"></script>
-    <script src="src/external-api.js"></script>
+    <script src="dist/external-api.js"></script>
 
     <script>
-    (function iframeApiHandshake() {
+    (function iframeApiHandshake(iframeApi) {
+
+      if (typeof iframeApi !== 'function') {
+        throw new Error('Missing iframeApi function');
+      }
 
       var myMethods = {
         foo: function (arg) {
@@ -54,7 +57,7 @@
       }
 
       iframeApi(myMethods, connected, options);
-    }());
+    }(window.iframeApi));
     </script>
 
     <iframe id="page" src="test/page.html" width="100%" height="500"></iframe>

@@ -1,60 +1,20 @@
 // to be run from <iframe src="..." ...></iframe>
-(function (md5) {
 
-  function isIframed() {
-    return parent !== window;
-  }
+function isIframed() {
+  return parent !== window;
+}
 
-  if (!isIframed()) {
-    // nothing to do, we are not inside an iframe
-    return;
-  }
-
-  function toArray(list) {
-    return Array.prototype.slice.call(list, 0);
-  }
-
-  function la(condition) {
-    if (!condition) {
-      var msg = toArray(arguments);
-      msg.shift();
-      msg = msg.map(JSON.stringify);
-      throw new Error(msg.join(' '));
-    }
-  }
-
-  la(typeof md5 === 'function', 'cannot find md5 function');
+if (isIframed()) {
+  var la = require('./la');
 
   // this function recreates the API object from source
   // TODO combine with similar function in external api
-  function reviveApi(returnPort, methodNames, values, methodHelps) {
-    function send(cmd) {
-      returnPort.postMessage({
-        cmd: cmd,
-        args: Array.prototype.slice.call(arguments, 1)
-      }, '*');
-    }
-    var api = {};
-    methodNames.forEach(function (name) {
-      if (values[name]) {
-        api[name] = values[name];
-      } else {
-        api[name] = send.bind(null, name);
-      }
-      if (methodHelps[name]) {
-        api[name].help = methodHelps[name];
-      }
-    });
+  var reviveApi = require('./revive-api');
+  la(typeof reviveApi === 'function', 'missing revive api function');
 
-    return api;
-  }
+  var removeWhiteSpace = require('./minify');
 
-  function removeWhiteSpace(src) {
-    la(src, 'missing source', src);
-    return src.replace(/\s{2,}/g, '');
-  }
-
-  function iframeApi(commands, callback) {
+  var iframeApi = function iframeApi(commands, callback) {
     console.log('creating iframe api');
 
     if (typeof commands === 'function') {
@@ -98,6 +58,8 @@
       }
     }
 
+    var md5 = require('./md5');
+    la(typeof md5 === 'function', 'cannot find md5 function');
     window.onmessage = messageToApi;
 
     la(isIframed(), 'not iframed');
@@ -134,8 +96,7 @@
         values: values
       }, '*');
     }
+  };
 
-  }
-  window.iframeApi = iframeApi;
-
-}(window.md5));
+  module.exports = iframeApi;
+}

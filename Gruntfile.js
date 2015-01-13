@@ -2,6 +2,8 @@
 module.exports = function (grunt) {
   var sourceFiles = ['src/*.js', '!src/md5.js', 'utils/log-to.js'];
 
+  var globalName = 'iframeApi';
+
   grunt.initConfig({
 
     jshint: {
@@ -49,6 +51,27 @@ module.exports = function (grunt) {
         'test/*.js',
         'utils/log-to.js'
       ]
+    },
+
+    browserify: {
+      iframe: {
+        options: {
+          browserifyOptions: {
+            standalone: globalName
+          }
+        },
+        src: ['src/iframe-api.js'],
+        dest: 'dist/iframe-api.js'
+      },
+      external: {
+        options: {
+          browserifyOptions: {
+            standalone: globalName
+          }
+        },
+        src: ['src/external-api.js'],
+        dest: 'dist/external-api.js'
+      }
     }
   });
 
@@ -57,5 +80,5 @@ module.exports = function (grunt) {
 
   grunt.registerTask('lint', ['jshint', 'eslint', 'jscs']);
   grunt.registerTask('test', ['clean-console']);
-  grunt.registerTask('default', ['deps-ok', 'nice-package', 'lint', 'sync', 'test']);
+  grunt.registerTask('default', ['deps-ok', 'nice-package', 'lint', 'sync', 'browserify', 'test']);
 };

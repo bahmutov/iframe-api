@@ -70,5 +70,7 @@
   "white"         : false,
 
   "globals"       : {
+    "require": true,
+    "module": true
   }
 }

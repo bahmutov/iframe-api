@@ -34,6 +34,8 @@
   },
 
   "globals": {
-    "console": true
+    "console": true,
+    "module": true,
+    "require": true
   }
 }
