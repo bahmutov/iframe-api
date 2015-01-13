@@ -2,9 +2,24 @@
 // installs api object that can be used to execute code
 // in iframe's context
 
-(function initIframeApi() {
+(function initIframeApi(md5) {
 
   /* global console */
+
+  function toArray(list) {
+    return Array.prototype.slice.call(list, 0);
+  }
+
+  function la(condition) {
+    if (!condition) {
+      var msg = toArray(arguments);
+      msg.shift();
+      msg = msg.map(JSON.stringify);
+      throw new Error(msg.join(' '));
+    }
+  }
+
+  la(typeof md5 === 'function', 'cannot find md5 function');
 
   function makeExternalApi(methodNames) {
     function send(cmd) {
@@ -52,8 +67,10 @@
           console.log('sending external api back to the frame');
           console.assert(typeof frameApi.api === 'function', 'missing frameApi.api', frameApi);
 
+          var source = makeExternalApi.toString();
           frameApi.api({
-            source: makeExternalApi.toString(),
+            source: source,
+            md5: md5(source),
             methodNames: Object.keys(externalApi)
           });
         }
@@ -85,4 +102,4 @@
   }
 
   window.iframeApi = iframeApi;
-}());
+}(window.md5));

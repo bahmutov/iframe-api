@@ -14,6 +14,8 @@
     <button id="btn" style="display:none">Call iframe API method</button>
 
     <script src="utils/log-to.js"></script>
+
+    <script src="src/md5.js"></script>
     <script src="src/external-api.js"></script>
 
     <script>
@@ -26,14 +28,15 @@
         },
         baz: function () {
           console.log('myMethods.baz()');
-        }
+        },
+        version: '1.0.0'
       };
 
       iframeApi(myMethods, function (err, api) {
         if (err) {
           throw new Error('iframeApi error ' + err);
         }
-        console.log('received api from iframe');
+        console.log('received api from iframe with version', api.version);
         console.log('api methods:', Object.keys(api));
 
         var btn = document.getElementById('btn');

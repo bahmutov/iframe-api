@@ -27,13 +27,14 @@
       var api = {
         bar: function (message) {
           console.log('iframe: api.bar', message);
-        }
+        },
+        version: '0.1.0' // let the client know
       };
       iframeApi(api, function (err, externalApi) {
         if (err) {
           throw new Error('Could not init external api ' + err);
         }
-        console.log('iframe has external api object');
+        console.log('iframe has external api object, version', externalApi.version);
         console.log('api methods:', Object.keys(externalApi));
 
         var btn = document.getElementById('btn');

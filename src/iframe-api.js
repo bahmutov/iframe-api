@@ -65,10 +65,11 @@
       }
 
       if (e.data.cmd === 'api') {
-        console.log('received parent api');
+        var options = e.data.args[0];
+        console.log('received parent api with MD5', options.md5);
+
         /* jshint -W061 */
         /* eslint no-eval:0 */
-        var options = e.data.args[0];
         la(typeof options === 'object', 'expected parent api options', options);
         la(typeof options.source === 'string', 'cannot find source', options);
         la(Array.isArray(options.methodNames), 'cannot find method names', options);
