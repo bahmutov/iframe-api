@@ -19,8 +19,12 @@
     (function iframeApiHandshake() {
 
       var myMethods = {
-        foo: function () {
-          console.log('myMethods.foo called');
+        foo: function (arg) {
+          console.log('myMethods.foo called wtih argument', arg);
+          this.baz();
+        },
+        baz: function () {
+          console.log('myMethods.baz()');
         }
       };
 
@@ -34,7 +38,7 @@
         var btn = document.getElementById('btn');
         btn.addEventListener('click', function () {
           console.log('button clicked, calling method via iframe api');
-          api.bar();
+          api.bar('hi from external site');
         });
         btn.style.display = '';
       });

@@ -15,6 +15,7 @@
     "tests",
     "docs",
     "Gruntfile.js",
-    "package.json"
+    "package.json",
+    "images"
   ]
 }

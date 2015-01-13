@@ -38,7 +38,7 @@
         var btn = document.getElementById('btn');
         btn.addEventListener('click', function () {
           console.log('button clicked, calling method on external api');
-          externalApi.foo();
+          externalApi.foo('from iframe');
         });
         btn.style.display = '';
       });
