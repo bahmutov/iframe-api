@@ -44,7 +44,7 @@ module.exports = function (grunt) {
       },
       src: [
         'README.md',
-        'src/*.js',
+        'dist/*.js',
         'index.html',
         'bower_components/es5-shim/es5-shim.js',
         'test/page.html',
