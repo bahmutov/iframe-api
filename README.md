@@ -12,6 +12,50 @@
 
 Available on NPM and bower under name `iframe-api`.
 
+## Example
+
+**external website** (index.html)
+
+```html
+<script src="iframe-api/src/external-api.js"></script>
+<script>
+var myMethods = {
+  foo: function (arg) {
+    console.log('myMethods.foo called wtih argument', arg);
+  }
+};
+iframeApi(myMethods, function (err, api) {
+  api.bar(); // or whatever methods iframed website exposes
+});
+</script>
+<iframe src="iframed.html"></iframe>
+```
+
+**iframed website** (iframed.html)
+
+```html
+<script src="iframe-api/src/iframe-api.js"></script>
+<script>
+var api = {
+  bar: function (message) {
+    console.log('iframed called from external', message);
+  }
+};
+iframeApi(api, function (err, externalApi) {
+  externalApi.foo('hello world!');
+});
+</script>
+```
+
+**event sequence**
+
+* iframe element loads `iframed.html`
+* iframed website loads [src/iframe-api.js](src/iframe-api.js)
+* iframed website executed `iframeApi` that posts a message to the parent
+    - the payload includes iframe's serialized object `api`
+* external website gets the `api` object and makes a call `api.bar()`
+* iframed website makes call to the external website using `externalApi.foo` method.
+
 ### Small print
 
 Author: Gleb Bahmutov &copy; 2015
