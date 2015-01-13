@@ -56,6 +56,12 @@ iframeApi(api, function (err, externalApi) {
 * external website gets the `api` object and makes a call `api.bar()`
 * iframed website makes call to the external website using `externalApi.foo` method.
 
+The websites communicate by calling methods on the returned api object, underneath
+the we use `window.postMessage`. The iframed website initiates the contact because it knows
+when it has been loaded and ready to communicate.
+
+![iframe-api](images/iframe-api-boundary.png)
+
 ### Small print
 
 Author: Gleb Bahmutov &copy; 2015
