@@ -17,12 +17,14 @@ Available on NPM and bower under name `iframe-api`.
 **external website** (index.html)
 
 ```html
+<script src="iframe-api/src/md5.js"></script>
 <script src="iframe-api/src/external-api.js"></script>
 <script>
 var myMethods = {
   foo: function (arg) {
     console.log('myMethods.foo called wtih argument', arg);
-  }
+  },
+  version: '0.1.0' // primitive values are also allowed
 };
 iframeApi(myMethods, function (err, api) {
   api.bar(); // or whatever methods iframed website exposes
@@ -34,6 +36,7 @@ iframeApi(myMethods, function (err, api) {
 **iframed website** (iframed.html)
 
 ```html
+<script src="iframe-api/src/md5.js"></script>
 <script src="iframe-api/src/iframe-api.js"></script>
 <script>
 var api = {

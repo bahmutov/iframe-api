@@ -27,7 +27,7 @@
 
   // this function recreates the API object from source
   // TODO combine with similar function in external api
-  function reviveApi(returnPort, methodNames, methodHelps) {
+  function reviveApi(returnPort, methodNames, values, methodHelps) {
     function send(cmd) {
       returnPort.postMessage({
         cmd: cmd,
@@ -36,7 +36,11 @@
     }
     var api = {};
     methodNames.forEach(function (name) {
-      api[name] = send.bind(null, name);
+      if (values[name]) {
+        api[name] = values[name];
+      } else {
+        api[name] = send.bind(null, name);
+      }
       if (methodHelps[name]) {
         api[name].help = methodHelps[name];
       }
@@ -73,7 +77,9 @@
         la(typeof options === 'object', 'expected parent api options', options);
         la(typeof options.source === 'string', 'cannot find source', options);
         la(Array.isArray(options.methodNames), 'cannot find method names', options);
-        var api = eval('(' + options.source + ')(options.methodNames)');
+        la(typeof options.values === 'object', 'cannot find api property values', options);
+
+        var api = eval('(' + options.source + ')(options.methodNames, options.values)');
         console.log('got an api to the external site');
         setTimeout(function () {
           callback(null, api);
@@ -103,9 +109,16 @@
       var apiSource = reviveApi.toString();
       var apiMethodNames = Object.keys(commands);
       var apiMethodHelps = {};
+      // values for non-methods
+      var values = {};
+
       apiMethodNames.forEach(function (name) {
         var fn = commands[name];
-        apiMethodHelps[name] = fn.help;
+        if (typeof fn === 'function') {
+          apiMethodHelps[name] = fn.help;
+        } else {
+          values[name] = commands[name];
+        }
       });
 
       apiSource = removeWhiteSpace(apiSource);
@@ -117,7 +130,8 @@
         source: apiSource,
         md5: md5(apiSource),
         apiMethodNames: apiMethodNames,
-        apiMethodHelps: apiMethodHelps
+        apiMethodHelps: apiMethodHelps,
+        values: values
       }, '*');
     }
 

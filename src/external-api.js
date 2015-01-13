@@ -21,7 +21,7 @@
 
   la(typeof md5 === 'function', 'cannot find md5 function');
 
-  function makeExternalApi(methodNames) {
+  function makeExternalApi(methodNames, values) {
     function send(cmd) {
       // parent is the window element from iframe
       parent.postMessage({
@@ -31,7 +31,11 @@
     }
     var api = {};
     methodNames.forEach(function (name) {
-      api[name] = send.bind(null, name);
+      if (typeof values[name] !== 'undefined') {
+        api[name] = values[name];
+      } else {
+        api[name] = send.bind(null, name);
+      }
     });
     return api;
   }
@@ -57,7 +61,8 @@
         /* eslint no-eval:0 */
         // event.source is the communication channel pointing at iframe
         // it allows posting messages back to the iframe
-        return eval('(' + options.source + ')(event.source, options.apiMethodNames, options.apiMethodHelps)');
+        return eval('(' + options.source +
+          ')(event.source, options.apiMethodNames, options.values, options.apiMethodHelps)');
       }
 
       function sendExternalApi(frameApi) {
@@ -67,11 +72,20 @@
           console.log('sending external api back to the frame');
           console.assert(typeof frameApi.api === 'function', 'missing frameApi.api', frameApi);
 
+          var methodNames = Object.keys(externalApi);
           var source = makeExternalApi.toString();
+          var values = {};
+          methodNames.forEach(function (name) {
+            if (typeof externalApi[name] !== 'function') {
+              values[name] = externalApi[name];
+            }
+          });
+
           frameApi.api({
             source: source,
             md5: md5(source),
-            methodNames: Object.keys(externalApi)
+            methodNames: methodNames,
+            values: values
           });
         }
       }
