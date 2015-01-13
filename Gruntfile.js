@@ -1,6 +1,7 @@
 /*global module:false*/
 module.exports = function (grunt) {
-  var sourceFiles = ['src/*.js', '!src/md5.js', 'utils/log-to.js'];
+  var sourceFiles = ['src/*.js', '!src/md5.js', 'utils/log-to.js', '!src/*-spec.js'];
+  var testFiles = ['src/*-spec.js'];
 
   var globalName = 'iframeApi';
 
@@ -8,6 +9,7 @@ module.exports = function (grunt) {
 
     jshint: {
       all: sourceFiles,
+      test: testFiles,
       options: {
         jshintrc: 'utils/.jshintrc',
         reporter: require('jshint-summary')
@@ -72,6 +74,15 @@ module.exports = function (grunt) {
         src: ['src/external-api.js'],
         dest: 'dist/external-api.js'
       }
+    },
+
+    mochaTest: {
+      test: {
+        options: {
+          reporter: 'spec'
+        },
+        src: testFiles
+      }
     }
   });
 
@@ -79,6 +90,6 @@ module.exports = function (grunt) {
   plugins.forEach(grunt.loadNpmTasks);
 
   grunt.registerTask('lint', ['jshint', 'eslint', 'jscs']);
-  grunt.registerTask('test', ['clean-console']);
+  grunt.registerTask('test', ['mochaTest', 'clean-console']);
   grunt.registerTask('default', ['deps-ok', 'nice-package', 'lint', 'sync', 'browserify', 'test']);
 };

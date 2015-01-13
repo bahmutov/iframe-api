@@ -13,15 +13,12 @@ if (isIframed()) {
   la(typeof reviveApi === 'function', 'missing revive api function');
 
   var removeWhiteSpace = require('./minify');
+  var figureOutOptions = require('./figure-out-options');
 
-  var iframeApi = function iframeApi(commands, callback, options) {
-    console.log('creating iframe api');
+  var iframeApi = function iframeApi(myApi, cb, userOptions) {
+    var params = figureOutOptions(myApi, cb, userOptions);
 
-    if (typeof commands === 'function') {
-      callback = commands;
-      commands = null;
-    }
-    la(typeof callback === 'function', 'need callback function');
+    la(typeof params.callback === 'function', 'need callback function', params);
 
     var receivedExternalApi = function receivedExternalApi(received) {
       /* jshint -W061 */
@@ -32,13 +29,13 @@ if (isIframed()) {
       la(typeof received.values === 'object', 'cannot find api property values', received);
 
       var verifyMd5 = require('./verify-md5');
-      verifyMd5(options, received);
+      verifyMd5(params.options, received);
 
       var api = eval('(' + received.source + ')(parent, received.methodNames, received.values)');
 
       console.log('got an api to the external site');
       setTimeout(function () {
-        callback(null, api);
+        params.callback(null, api);
       }, 0);
     };
 
@@ -53,11 +50,11 @@ if (isIframed()) {
         return;
       }
 
-      if (commands) {
-        var method = commands[e.data.cmd];
+      if (params.myApi) {
+        var method = params.myApi[e.data.cmd];
         if (typeof method === 'function') {
           var args = Array.isArray(e.data.args) ? e.data.args : [];
-          method.apply(commands, args);
+          method.apply(params.myApi, args);
         } else {
           console.log('unknown command', e.data.cmd, 'from the parent', e.data.cmd);
         }
@@ -70,22 +67,22 @@ if (isIframed()) {
 
     la(isIframed(), 'not iframed');
 
-    if (commands) {
+    if (params.myApi) {
       // placeholder for API method to send parent's api back to iframe
-      commands.api = function () {};
+      params.myApi.api = function () {};
 
       var apiSource = reviveApi.toString();
-      var apiMethodNames = Object.keys(commands);
+      var apiMethodNames = Object.keys(params.myApi);
       var apiMethodHelps = {};
       // values for non-methods
       var values = {};
 
       apiMethodNames.forEach(function (name) {
-        var fn = commands[name];
+        var fn = params.myApi[name];
         if (typeof fn === 'function') {
           apiMethodHelps[name] = fn.help;
         } else {
-          values[name] = commands[name];
+          values[name] = params.myApi[name];
         }
       });
 

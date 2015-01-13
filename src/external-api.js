@@ -7,14 +7,12 @@ var la = require('./la');
 la(typeof md5 === 'function', 'cannot find md5 function');
 
 var makeExternalApi = require('./revive-api');
+var figureOutOptions = require('./figure-out-options');
 
-function iframeApi(externalApi, callback, options) {
-  if (typeof externalApi === 'function') {
-    options = callback;
-    callback = externalApi;
-    externalApi = null;
-  }
-  options = options || {};
+function iframeApi(myApi, cb, userOptions) {
+  var params = figureOutOptions(myApi, cb, userOptions);
+
+  params.options = params.options || {};
 
   var frameApi;
 
@@ -25,7 +23,7 @@ function iframeApi(externalApi, callback, options) {
   function processMessage(event) {
 
     function reviveApi(opts) {
-      verifyMd5(options, opts);
+      verifyMd5(params.options, opts);
 
       /* jshint -W061 */
       /* eslint no-eval:0 */
@@ -38,18 +36,18 @@ function iframeApi(externalApi, callback, options) {
     function sendExternalApi(frameApi) {
       console.assert(frameApi, 'missing frame api');
 
-      if (externalApi) {
+      if (params.myApi) {
         console.log('sending external api back to the frame');
         console.assert(typeof frameApi.api === 'function', 'missing frameApi.api', frameApi);
 
-        var methodNames = Object.keys(externalApi);
+        var methodNames = Object.keys(params.myApi);
         var source = makeExternalApi.toString();
         source = removeWhiteSpace(source);
 
         var values = {};
         methodNames.forEach(function (name) {
-          if (typeof externalApi[name] !== 'function') {
-            values[name] = externalApi[name];
+          if (typeof params.myApi[name] !== 'function') {
+            values[name] = params.myApi[name];
           }
         });
 
@@ -69,22 +67,22 @@ function iframeApi(externalApi, callback, options) {
         // we no longer need to api method
         delete frameApi.api;
         setTimeout(function () {
-          callback(null, frameApi);
+          params.callback(null, frameApi);
         }, 0);
       } catch (err) {
         setTimeout(function () {
-          callback(err);
+          params.callback(err);
         }, 0);
       }
 
       return;
     }
 
-    if (externalApi) {
-      var method = externalApi[event.data.cmd];
+    if (params.myApi) {
+      var method = params.myApi[event.data.cmd];
       if (typeof method === 'function') {
         // parent has a method iframe is trying to call
-        method.apply(externalApi, event.data.args);
+        method.apply(params.myApi, event.data.args);
       }
     }
   }

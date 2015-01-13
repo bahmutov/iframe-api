@@ -30,7 +30,8 @@
     "no-undefined": 0,
     "no-sequences": 2,
     "no-for-loops": 2,
-    "no-process-exit": 0
+    "no-process-exit": 0,
+    "consistent-return": 0
   },
 
   "globals": {

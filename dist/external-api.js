@@ -8,14 +8,12 @@ var la = require('./la');
 la(typeof md5 === 'function', 'cannot find md5 function');
 
 var makeExternalApi = require('./revive-api');
+var figureOutOptions = require('./figure-out-options');
 
-function iframeApi(externalApi, callback, options) {
-  if (typeof externalApi === 'function') {
-    options = callback;
-    callback = externalApi;
-    externalApi = null;
-  }
-  options = options || {};
+function iframeApi(myApi, cb, userOptions) {
+  var params = figureOutOptions(myApi, cb, userOptions);
+
+  params.options = params.options || {};
 
   var frameApi;
 
@@ -26,7 +24,7 @@ function iframeApi(externalApi, callback, options) {
   function processMessage(event) {
 
     function reviveApi(opts) {
-      verifyMd5(options, opts);
+      verifyMd5(params.options, opts);
 
       /* jshint -W061 */
       /* eslint no-eval:0 */
@@ -39,18 +37,18 @@ function iframeApi(externalApi, callback, options) {
     function sendExternalApi(frameApi) {
       console.assert(frameApi, 'missing frame api');
 
-      if (externalApi) {
+      if (params.myApi) {
         console.log('sending external api back to the frame');
         console.assert(typeof frameApi.api === 'function', 'missing frameApi.api', frameApi);
 
-        var methodNames = Object.keys(externalApi);
+        var methodNames = Object.keys(params.myApi);
         var source = makeExternalApi.toString();
         source = removeWhiteSpace(source);
 
         var values = {};
         methodNames.forEach(function (name) {
-          if (typeof externalApi[name] !== 'function') {
-            values[name] = externalApi[name];
+          if (typeof params.myApi[name] !== 'function') {
+            values[name] = params.myApi[name];
           }
         });
 
@@ -70,22 +68,22 @@ function iframeApi(externalApi, callback, options) {
         // we no longer need to api method
         delete frameApi.api;
         setTimeout(function () {
-          callback(null, frameApi);
+          params.callback(null, frameApi);
         }, 0);
       } catch (err) {
         setTimeout(function () {
-          callback(err);
+          params.callback(err);
         }, 0);
       }
 
       return;
     }
 
-    if (externalApi) {
-      var method = externalApi[event.data.cmd];
+    if (params.myApi) {
+      var method = params.myApi[event.data.cmd];
       if (typeof method === 'function') {
         // parent has a method iframe is trying to call
-        method.apply(externalApi, event.data.args);
+        method.apply(params.myApi, event.data.args);
       }
     }
   }
@@ -95,7 +93,71 @@ function iframeApi(externalApi, callback, options) {
 
 module.exports = iframeApi;
 
-},{"./la":2,"./md5":3,"./minify":4,"./revive-api":5,"./verify-md5":7}],2:[function(require,module,exports){
+},{"./figure-out-options":2,"./la":3,"./md5":4,"./minify":5,"./revive-api":6,"./verify-md5":8}],2:[function(require,module,exports){
+var la = require('./la');
+
+function find(list, predicate, stopCriteria) {
+  var k, n = list.length;
+  for (k = 0; k < n; k += 1) {
+    if (typeof stopCriteria === 'function') {
+      if (stopCriteria(list[k], k)) {
+        return;
+      }
+    }
+    if (predicate(list[k])) {
+      return list[k];
+    }
+  }
+}
+
+function remove(list, o) {
+  if (!o) {
+    return;
+  }
+
+  var k, n = list.length;
+  for (k = 0; k < n; k += 1) {
+    if (list[k] === o) {
+      delete list[k];
+      return o;
+    }
+  }
+  throw new Error('Could not find object in the list ' + JSON.stringify(o));
+}
+
+function isFunction(x) {
+  return typeof x === 'function';
+}
+
+function compose(f, g) {
+  return function fg() {
+    return f.call(null, g.apply(null, arguments));
+  };
+}
+
+function isPlainObject(x) {
+  return typeof x === 'object' && x.constructor === Object;
+}
+
+module.exports = function figureOutOptions() {
+  var del = remove.bind(null, arguments);
+  var search = find.bind(null, arguments);
+  var removeFound = compose(del, search);
+
+  var params = {};
+
+  // todo replace with composition operator
+  params.myApi = removeFound(isPlainObject, isFunction);
+
+  params.callback = removeFound(isFunction);
+  la(typeof params.callback === 'function', 'could not find callback function');
+
+  params.options = removeFound(isPlainObject);
+
+  return params;
+};
+
+},{"./la":3}],3:[function(require,module,exports){
 var toArray = require('./to-array');
 
 function la(condition) {
@@ -109,7 +171,7 @@ function la(condition) {
 
 module.exports = la;
 
-},{"./to-array":6}],3:[function(require,module,exports){
+},{"./to-array":7}],4:[function(require,module,exports){
 // utility - MD5 computation from
 var md5 = (function md5init() {
 
@@ -308,7 +370,7 @@ if (md5('hello') != '5d41402abc4b2a76b9719d911017c592') {
 
 module.exports = md5;
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 var la = require('./la');
 function removeWhiteSpace(src) {
   la(src, 'missing source', src);
@@ -317,7 +379,7 @@ function removeWhiteSpace(src) {
 
 module.exports = removeWhiteSpace;
 
-},{"./la":2}],5:[function(require,module,exports){
+},{"./la":3}],6:[function(require,module,exports){
 function reviveApi(returnPort, methodNames, values, methodHelps) {
   values = values || {};
   methodHelps = methodHelps || {};
@@ -345,13 +407,13 @@ function reviveApi(returnPort, methodNames, values, methodHelps) {
 
 module.exports = reviveApi;
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 function toArray(list) {
   return Array.prototype.slice.call(list, 0);
 }
 module.exports = toArray;
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 var la = require('./la');
 var md5 = require('./md5');
 
@@ -373,5 +435,5 @@ function verifyMd5(options, received) {
 
 module.exports = verifyMd5;
 
-},{"./la":2,"./md5":3}]},{},[1])(1)
+},{"./la":3,"./md5":4}]},{},[1])(1)
 });

@@ -1,4 +1,68 @@
 !function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.iframeApi=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+var la = require('./la');
+
+function find(list, predicate, stopCriteria) {
+  var k, n = list.length;
+  for (k = 0; k < n; k += 1) {
+    if (typeof stopCriteria === 'function') {
+      if (stopCriteria(list[k], k)) {
+        return;
+      }
+    }
+    if (predicate(list[k])) {
+      return list[k];
+    }
+  }
+}
+
+function remove(list, o) {
+  if (!o) {
+    return;
+  }
+
+  var k, n = list.length;
+  for (k = 0; k < n; k += 1) {
+    if (list[k] === o) {
+      delete list[k];
+      return o;
+    }
+  }
+  throw new Error('Could not find object in the list ' + JSON.stringify(o));
+}
+
+function isFunction(x) {
+  return typeof x === 'function';
+}
+
+function compose(f, g) {
+  return function fg() {
+    return f.call(null, g.apply(null, arguments));
+  };
+}
+
+function isPlainObject(x) {
+  return typeof x === 'object' && x.constructor === Object;
+}
+
+module.exports = function figureOutOptions() {
+  var del = remove.bind(null, arguments);
+  var search = find.bind(null, arguments);
+  var removeFound = compose(del, search);
+
+  var params = {};
+
+  // todo replace with composition operator
+  params.myApi = removeFound(isPlainObject, isFunction);
+
+  params.callback = removeFound(isFunction);
+  la(typeof params.callback === 'function', 'could not find callback function');
+
+  params.options = removeFound(isPlainObject);
+
+  return params;
+};
+
+},{"./la":3}],2:[function(require,module,exports){
 // to be run from <iframe src="..." ...></iframe>
 
 function isIframed() {
@@ -14,15 +78,12 @@ if (isIframed()) {
   la(typeof reviveApi === 'function', 'missing revive api function');
 
   var removeWhiteSpace = require('./minify');
+  var figureOutOptions = require('./figure-out-options');
 
-  var iframeApi = function iframeApi(commands, callback, options) {
-    console.log('creating iframe api');
+  var iframeApi = function iframeApi(myApi, cb, userOptions) {
+    var params = figureOutOptions(myApi, cb, userOptions);
 
-    if (typeof commands === 'function') {
-      callback = commands;
-      commands = null;
-    }
-    la(typeof callback === 'function', 'need callback function');
+    la(typeof params.callback === 'function', 'need callback function', params);
 
     var receivedExternalApi = function receivedExternalApi(received) {
       /* jshint -W061 */
@@ -33,13 +94,13 @@ if (isIframed()) {
       la(typeof received.values === 'object', 'cannot find api property values', received);
 
       var verifyMd5 = require('./verify-md5');
-      verifyMd5(options, received);
+      verifyMd5(params.options, received);
 
       var api = eval('(' + received.source + ')(parent, received.methodNames, received.values)');
 
       console.log('got an api to the external site');
       setTimeout(function () {
-        callback(null, api);
+        params.callback(null, api);
       }, 0);
     };
 
@@ -54,11 +115,11 @@ if (isIframed()) {
         return;
       }
 
-      if (commands) {
-        var method = commands[e.data.cmd];
+      if (params.myApi) {
+        var method = params.myApi[e.data.cmd];
         if (typeof method === 'function') {
           var args = Array.isArray(e.data.args) ? e.data.args : [];
-          method.apply(commands, args);
+          method.apply(params.myApi, args);
         } else {
           console.log('unknown command', e.data.cmd, 'from the parent', e.data.cmd);
         }
@@ -71,22 +132,22 @@ if (isIframed()) {
 
     la(isIframed(), 'not iframed');
 
-    if (commands) {
+    if (params.myApi) {
       // placeholder for API method to send parent's api back to iframe
-      commands.api = function () {};
+      params.myApi.api = function () {};
 
       var apiSource = reviveApi.toString();
-      var apiMethodNames = Object.keys(commands);
+      var apiMethodNames = Object.keys(params.myApi);
       var apiMethodHelps = {};
       // values for non-methods
       var values = {};
 
       apiMethodNames.forEach(function (name) {
-        var fn = commands[name];
+        var fn = params.myApi[name];
         if (typeof fn === 'function') {
           apiMethodHelps[name] = fn.help;
         } else {
-          values[name] = commands[name];
+          values[name] = params.myApi[name];
         }
       });
 
@@ -108,7 +169,7 @@ if (isIframed()) {
   module.exports = iframeApi;
 }
 
-},{"./la":2,"./md5":3,"./minify":4,"./revive-api":5,"./verify-md5":7}],2:[function(require,module,exports){
+},{"./figure-out-options":1,"./la":3,"./md5":4,"./minify":5,"./revive-api":6,"./verify-md5":8}],3:[function(require,module,exports){
 var toArray = require('./to-array');
 
 function la(condition) {
@@ -122,7 +183,7 @@ function la(condition) {
 
 module.exports = la;
 
-},{"./to-array":6}],3:[function(require,module,exports){
+},{"./to-array":7}],4:[function(require,module,exports){
 // utility - MD5 computation from
 var md5 = (function md5init() {
 
@@ -321,7 +382,7 @@ if (md5('hello') != '5d41402abc4b2a76b9719d911017c592') {
 
 module.exports = md5;
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 var la = require('./la');
 function removeWhiteSpace(src) {
   la(src, 'missing source', src);
@@ -330,7 +391,7 @@ function removeWhiteSpace(src) {
 
 module.exports = removeWhiteSpace;
 
-},{"./la":2}],5:[function(require,module,exports){
+},{"./la":3}],6:[function(require,module,exports){
 function reviveApi(returnPort, methodNames, values, methodHelps) {
   values = values || {};
   methodHelps = methodHelps || {};
@@ -358,13 +419,13 @@ function reviveApi(returnPort, methodNames, values, methodHelps) {
 
 module.exports = reviveApi;
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 function toArray(list) {
   return Array.prototype.slice.call(list, 0);
 }
 module.exports = toArray;
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 var la = require('./la');
 var md5 = require('./md5');
 
@@ -386,5 +447,5 @@ function verifyMd5(options, received) {
 
 module.exports = verifyMd5;
 
-},{"./la":2,"./md5":3}]},{},[1])(1)
+},{"./la":3,"./md5":4}]},{},[2])(2)
 });
