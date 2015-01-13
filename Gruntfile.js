@@ -46,5 +46,5 @@ module.exports = function (grunt) {
   plugins.forEach(grunt.loadNpmTasks);
 
   grunt.registerTask('lint', ['jshint', 'eslint', 'jscs']);
-  grunt.registerTask('default', ['deps-ok', 'nice-package', 'lint']);
+  grunt.registerTask('default', ['deps-ok', 'nice-package', 'lint', 'sync']);
 };

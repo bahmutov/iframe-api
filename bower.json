@@ -1,0 +1,20 @@
+{
+  "name": "iframe-api",
+  "version": "0.2.0",
+  "description": "Bidirectional API communication between external and iframed websites",
+  "license": "MIT",
+  "homepage": "https://github.com/bahmutov/iframe-api",
+  "authors": [
+    "Gleb Bahmutov <gleb.bahmutov@gmail.com>"
+  ],
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests",
+    "docs",
+    "Gruntfile.js",
+    "package.json"
+  ]
+}
