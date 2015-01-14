@@ -1,7 +1,7 @@
 {
   "name": "iframe-api",
   "description": "Bidirectional API communication between external and iframed websites",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "author": "Gleb Bahmutov <gleb.bahmutov@gmail.com>",
   "bugs": {
     "url": "https://github.com/bahmutov/iframe-api/issues"

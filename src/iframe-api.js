@@ -1,5 +1,3 @@
-// to be run from <iframe src="..." ...></iframe>
-
 require('es6-promise').polyfill();
 
 function isIframed() {
@@ -47,7 +45,7 @@ var iframeApi = function iframeApi(myApi, userOptions) {
         }
       }
     }
-    window.onmessage = processMessage;
+    window.addEventListener('message', processMessage);
 
     if (isIframed() && params.myApi) {
       apiMethods.send(params.myApi, parent);

@@ -1142,8 +1142,6 @@ module.exports = {
 };
 
 },{"./la":5,"./md5":6,"./minify":7,"./verify-md5":9}],4:[function(require,module,exports){
-// to be run from <iframe src="..." ...></iframe>
-
 require('es6-promise').polyfill();
 
 function isIframed() {
@@ -1191,7 +1189,7 @@ var iframeApi = function iframeApi(myApi, userOptions) {
         }
       }
     }
-    window.onmessage = processMessage;
+    window.addEventListener('message', processMessage);
 
     if (isIframed() && params.myApi) {
       apiMethods.send(params.myApi, parent);
