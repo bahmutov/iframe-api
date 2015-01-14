@@ -17,7 +17,6 @@
   <script src="../dist/iframe-api.js"></script>
   <script>
     (function apiHandshake() {
-      // var iframeApi = require('./src/iframe-api.js');
       if (typeof iframeApi === 'undefined') {
         console.log('Cannot find iframeApi function, are we inside an iframe?');
         return;
@@ -27,23 +26,41 @@
       var api = {
         bar: function (message) {
           console.log('iframe: api.bar', message);
+          return 'bar';
         },
         version: '0.1.0' // let the client know
       };
-      iframeApi(api, function (err, externalApi) {
-        if (err) {
-          throw new Error('Could not init external api ' + err);
+
+      function checkFooResult(result) {
+        console.log('external api .foo() returned', result);
+        if (result !== 'baz') {
+          throw new Error('incorrect result ' + result);
         }
+      }
+
+      function connected(externalApi) {
         console.log('iframe has external api object, version', externalApi.version);
         console.log('api methods:', Object.keys(externalApi));
+
+        if (externalApi.version !== '1.0.0') {
+          throw new Error('invalid iframe version ' + JSON.stringify(externalApi));
+        }
 
         var btn = document.getElementById('btn');
         btn.addEventListener('click', function () {
           console.log('button clicked, calling method on external api');
-          externalApi.foo('from iframe');
+          externalApi.foo('from iframe').then(checkFooResult, error);
         });
         btn.style.display = '';
-      });
+
+        externalApi.foo().then(checkFooResult, error);
+      }
+
+      function error(err) {
+        throw new Error('Could not init external api ' + err);
+      }
+
+      iframeApi(api, { debug: true }).then(connected, error);
     }());
   </script>
 </body>

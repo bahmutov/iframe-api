@@ -25,8 +25,10 @@ var myMethods = {
   },
   version: '0.1.0' // primitive values are also allowed
 };
-iframeApi(myMethods, function (err, api) {
+iframeApi(myMethods).then(function (api) {
   api.bar(); // or whatever methods iframed website exposes
+}, function (err) {
+  console.error('Could not get iframe api', err);
 });
 </script>
 <iframe src="iframed.html"></iframe>
@@ -42,7 +44,7 @@ var api = {
     console.log('iframed called from external', message);
   }
 };
-iframeApi(api, function (err, externalApi) {
+iframeApi(api).then(function (externalApi) {
   externalApi.foo('hello world!');
 });
 </script>
@@ -62,6 +64,58 @@ the we use `window.postMessage`. The iframed website initiates the contact becau
 when it has been loaded and ready to communicate.
 
 ![iframe-api](images/iframe-api-boundary.png)
+
+## API
+
+Single function `iframeApi(myApiObject, options)` returns a promise with resolved api object.
+
+* myApiObject
+  - can be undefined or null to avoid passing anything to the other side
+  - if empty object, the other side will receive empty object
+  - can have methods and properties
+
+**api object example**
+
+```js
+var myApi = {
+  foo: function () {
+    this.bar();
+  },
+  bar: function () {
+    console.log('hello', this.name)
+  },
+  name: 'world'
+};
+```
+
+* options - optional object with the following properties
+  - `debug | verbose` prints console messages during handshake
+  - `md5` 
+    + if `true` this side will compute md5 checksum of the 
+    received source and compare to declared before reviving api object.
+    + if a string, takes it as the md5 checksum to be compared against computed.
+
+**options example**
+
+```js
+// do not recreate received api, unless its MD5 matches given string
+var options = {
+  debug: false,
+  md5: '845998b5f8907e585c31874ec5cc79a0'
+};
+```
+
+## Calling remote methods
+
+You can pass arguments to remove API. Each method call returns a promise object
+
+```js
+iframeApi(...).then(function (remoteApi) {
+  remoteApi.foo('a', 'b', 'c').then(function (result) {
+    console.log('remoteApi.foo(a, b, c) returned', result);
+  });
+});
+```
 
 ### Small print
 

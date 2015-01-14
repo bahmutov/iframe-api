@@ -15,7 +15,7 @@
 
     <script src="utils/log-to.js"></script>
 
-    <script src="dist/external-api.js"></script>
+    <script src="dist/iframe-api.js"></script>
 
     <script>
     (function iframeApiHandshake(iframeApi) {
@@ -27,10 +27,11 @@
       var myMethods = {
         foo: function (arg) {
           console.log('myMethods.foo called wtih argument', arg);
-          this.baz();
+          return this.baz();
         },
         baz: function () {
           console.log('myMethods.baz()');
+          return 'baz'
         },
         version: '1.0.0'
       };
@@ -38,15 +39,16 @@
       var options = {
         // true - verify received md5 against decalred.
         // string - compute and compare md5 to the given string
-        md5: true
+        md5: true,
+        debug: true
       };
 
-      function connected(err, api) {
-        if (err) {
-          throw new Error('iframeApi error ' + err);
-        }
+      function connected(api) {
         console.log('received api from iframe with version', api.version);
         console.log('api methods:', Object.keys(api));
+        if (api.version !== '0.1.0') {
+          throw new Error('invalid iframe version ' + api);
+        }
 
         var btn = document.getElementById('btn');
         btn.addEventListener('click', function () {
@@ -54,9 +56,20 @@
           api.bar('hi from external site');
         });
         btn.style.display = '';
+
+        // try calling a method
+        api.bar().then(function (result) {
+          if (result !== 'bar') {
+            throw new Error('invalid result from .bar() ' + result);
+          }
+        });
       }
 
-      iframeApi(myMethods, connected, options);
+      function error(err) {
+        throw new Error('iframeApi error ' + err);
+      }
+
+      iframeApi(myMethods, options).then(connected, error);
     }(window.iframeApi));
     </script>
 
