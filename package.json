@@ -1,12 +1,15 @@
 {
   "name": "iframe-api",
   "description": "Bidirectional API communication between external and iframed websites",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "author": "Gleb Bahmutov <gleb.bahmutov@gmail.com>",
   "bugs": {
     "url": "https://github.com/bahmutov/iframe-api/issues"
   },
   "contributors": [],
+  "dependencies": {
+    "es6-promise": "2.0.1"
+  },
   "devDependencies": {
     "eslint-rules": "0.2.0",
     "grunt": "0.4.5",

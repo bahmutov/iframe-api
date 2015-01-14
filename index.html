@@ -41,10 +41,7 @@
         md5: true
       };
 
-      function connected(err, api) {
-        if (err) {
-          throw new Error('iframeApi error ' + err);
-        }
+      function connected(api) {
         console.log('received api from iframe with version', api.version);
         console.log('api methods:', Object.keys(api));
         if (api.version !== '0.1.0') {
@@ -59,7 +56,11 @@
         btn.style.display = '';
       }
 
-      iframeApi(myMethods, connected, options);
+      function error(err) {
+        throw new Error('iframeApi error ' + err);
+      }
+
+      iframeApi(myMethods, options).then(connected, error);
     }(window.iframeApi));
     </script>
 

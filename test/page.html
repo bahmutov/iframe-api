@@ -30,10 +30,8 @@
         },
         version: '0.1.0' // let the client know
       };
-      iframeApi(api, function (err, externalApi) {
-        if (err) {
-          throw new Error('Could not init external api ' + err);
-        }
+
+      function connected(externalApi) {
         console.log('iframe has external api object, version', externalApi.version);
         console.log('api methods:', Object.keys(externalApi));
 
@@ -47,7 +45,13 @@
           externalApi.foo('from iframe');
         });
         btn.style.display = '';
-      });
+      }
+
+      function error(err) {
+        throw new Error('Could not init external api ' + err);
+      }
+
+      iframeApi(api).then(connected, error);
     }());
   </script>
 </body>

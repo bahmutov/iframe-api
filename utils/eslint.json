@@ -37,6 +37,7 @@
   "globals": {
     "console": true,
     "module": true,
-    "require": true
+    "require": true,
+    "Promise": true
   }
 }
