@@ -56,7 +56,7 @@ module.exports = function (grunt) {
     },
 
     browserify: {
-      iframe: {
+      api: {
         options: {
           browserifyOptions: {
             standalone: globalName
@@ -64,15 +64,6 @@ module.exports = function (grunt) {
         },
         src: ['src/iframe-api.js'],
         dest: 'dist/iframe-api.js'
-      },
-      external: {
-        options: {
-          browserifyOptions: {
-            standalone: globalName
-          }
-        },
-        src: ['src/external-api.js'],
-        dest: 'dist/external-api.js'
       }
     },
 
