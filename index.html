@@ -27,10 +27,11 @@
       var myMethods = {
         foo: function (arg) {
           console.log('myMethods.foo called wtih argument', arg);
-          this.baz();
+          return this.baz();
         },
         baz: function () {
           console.log('myMethods.baz()');
+          return 'baz'
         },
         version: '1.0.0'
       };
@@ -38,7 +39,8 @@
       var options = {
         // true - verify received md5 against decalred.
         // string - compute and compare md5 to the given string
-        md5: true
+        md5: true,
+        debug: true
       };
 
       function connected(api) {

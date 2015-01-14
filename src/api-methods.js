@@ -9,10 +9,13 @@ function apiFactory(port, methodNames, values, methodHelps) {
     throw new Error('Invalid port - does not have postMessage');
   }
 
+  var id = 0;
   function send(cmd) {
+    id += 1;
     port.postMessage({
       cmd: cmd,
-      args: Array.prototype.slice.call(arguments, 1)
+      args: Array.prototype.slice.call(arguments, 1),
+      id: id
     }, '*');
   }
   var api = {};
@@ -57,12 +60,25 @@ function sendApi(api, target) {
   // TODO(gleb): validate that api source can be recreated back
 
   target.postMessage({
-    cmd: 'api',
+    cmd: '__api',
     source: apiSource,
     md5: md5(apiSource),
     methodNames: methodNames,
     methodHelps: methodHelps,
     values: values
+  }, '*');
+}
+
+// sending result for command back to the caller
+function respond(port, commandData, result) {
+  la(typeof commandData === 'object' && commandData.id,
+    'missing command id', commandData);
+
+  console.log('responding to command', commandData.id, 'with', result);
+  port.postMessage({
+    cmd: '__response',
+    id: commandData.id,
+    result: result
   }, '*');
 }
 
@@ -86,5 +102,6 @@ function reviveApi(userOptions, received, port) {
 module.exports = {
   apiFactory: apiFactory,
   send: sendApi,
-  reviveApi: reviveApi
+  reviveApi: reviveApi,
+  respond: respond
 };

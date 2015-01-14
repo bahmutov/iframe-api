@@ -5,6 +5,7 @@ function isIframed() {
 }
 
 var apiMethods = require('./api-methods');
+var la = require('./la');
 
 var iframeApi = function iframeApi(myApi, userOptions) {
   var params = {
@@ -16,34 +17,53 @@ var iframeApi = function iframeApi(myApi, userOptions) {
 
   return new Promise(function (resolve, reject) {
 
+    function receiveApi(received, port) {
+      try {
+        var api = apiMethods.reviveApi(params.options, received, port);
+        if (!isIframed() && params.myApi) {
+          log('sending external api back to the iframe');
+          apiMethods.send(params.myApi, port);
+        }
+        resolve(api);
+      } catch (err) {
+        reject(err);
+      }
+    }
+
+    function callApiMethod(data, port) {
+      var cmd = data.cmd;
+      var args = data.args;
+      la(typeof cmd === 'string', 'missing command string', cmd);
+      if (!Array.isArray(args)) {
+        args = [];
+      }
+
+      if (params.myApi) {
+        var method = params.myApi[cmd];
+        if (typeof method === 'function') {
+          var result = method.apply(params.myApi, args);
+          log('method', cmd, 'result', JSON.stringify(result));
+          apiMethods.respond(port, data, result);
+        } else {
+          log('unknown command', cmd, 'from the parent');
+        }
+      }
+    }
+
     function processMessage(e) {
       if (!e.data || !e.data.cmd) {
         log('invalid message received by the iframe API', e.data);
         return;
       }
-      if (e.data.cmd === 'api') {
-        try {
-          var api = apiMethods.reviveApi(params.options, e.data, e.source);
-          if (!isIframed() && params.myApi) {
-            log('sending external api back to the iframe');
-            apiMethods.send(params.myApi, e.source);
-          }
-          resolve(api);
-        } catch (err) {
-          reject(err);
-        }
+      if (e.data.cmd === '__api') {
+        return receiveApi(e.data, e.source);
+      }
+      if (e.data.cmd === '__response') {
+        log('received response', e.data.result, 'to command', e.data.id);
         return;
       }
 
-      if (params.myApi) {
-        var method = params.myApi[e.data.cmd];
-        if (typeof method === 'function') {
-          var args = Array.isArray(e.data.args) ? e.data.args : [];
-          method.apply(params.myApi, args);
-        } else {
-          console.log('unknown command', e.data.cmd, 'from the parent', e.data.cmd);
-        }
-      }
+      callApiMethod(e.data, e.source);
     }
     window.addEventListener('message', processMessage);
 
