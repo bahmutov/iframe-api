@@ -78,7 +78,6 @@ if (isIframed()) {
   la(typeof apiMethods.reviveApi === 'function',
     'missing revive api function');
 
-  var removeWhiteSpace = require('./minify');
   var figureOutOptions = require('./figure-out-options');
 
   var iframeApi = function iframeApi(myApi, cb, userOptions) {
@@ -94,7 +93,7 @@ if (isIframed()) {
 
       if (e.data.cmd === 'api') {
         try {
-          var api = apiMethods.reviveApi(params.options, e.data.args[0], parent);
+          var api = apiMethods.reviveApi(params.options, e.data, parent);
           setTimeout(function () {
             params.callback(null, api);
           }, 0);
@@ -118,50 +117,19 @@ if (isIframed()) {
       }
     }
 
-    var md5 = require('./md5');
-    la(typeof md5 === 'function', 'cannot find md5 function');
     window.onmessage = messageToApi;
 
     la(isIframed(), 'not iframed');
 
     if (params.myApi) {
-      // placeholder for API method to send parent's api back to iframe
-      params.myApi.api = function () {};
-
-      var apiSource = apiMethods.apiFactory.toString();
-      var methodNames = Object.keys(params.myApi);
-      var methodHelps = {};
-      // values for non-methods
-      var values = {};
-
-      methodNames.forEach(function (name) {
-        var fn = params.myApi[name];
-        if (typeof fn === 'function') {
-          methodHelps[name] = fn.help;
-        } else {
-          values[name] = params.myApi[name];
-        }
-      });
-
-      apiSource = removeWhiteSpace(apiSource);
-
-      // TODO(gleb): validate that api source can be recreated back
-
-      parent.postMessage({
-        cmd: 'api',
-        source: apiSource,
-        md5: md5(apiSource),
-        methodNames: methodNames,
-        methodHelps: methodHelps,
-        values: values
-      }, '*');
+      apiMethods.send(params.myApi, parent);
     }
   };
 
   module.exports = iframeApi;
 }
 
-},{"./figure-out-options":1,"./la":3,"./md5":4,"./minify":5,"./revive-api":6}],3:[function(require,module,exports){
+},{"./figure-out-options":1,"./la":3,"./revive-api":6}],3:[function(require,module,exports){
 var toArray = require('./to-array');
 
 function la(condition) {
@@ -416,6 +384,42 @@ function apiFactory(port, methodNames, values, methodHelps) {
   return api;
 }
 
+var md5 = require('./md5');
+la(typeof md5 === 'function', 'cannot find md5 function');
+var removeWhiteSpace = require('./minify');
+
+function sendApi(api, target) {
+  la(target && target.postMessage, 'missing target postMessage function');
+
+  var apiSource = apiFactory.toString();
+  var methodNames = Object.keys(api);
+  var methodHelps = {};
+  // values for non-methods
+  var values = {};
+
+  methodNames.forEach(function (name) {
+    var fn = api[name];
+    if (typeof fn === 'function') {
+      methodHelps[name] = fn.help;
+    } else {
+      values[name] = api[name];
+    }
+  });
+
+  apiSource = removeWhiteSpace(apiSource);
+
+  // TODO(gleb): validate that api source can be recreated back
+
+  target.postMessage({
+    cmd: 'api',
+    source: apiSource,
+    md5: md5(apiSource),
+    methodNames: methodNames,
+    methodHelps: methodHelps,
+    values: values
+  }, '*');
+}
+
 function reviveApi(userOptions, received, port) {
   la(arguments.length === 3, 'missing arguments to revive api');
   la(port && typeof port.postMessage === 'function',
@@ -435,10 +439,11 @@ function reviveApi(userOptions, received, port) {
 
 module.exports = {
   apiFactory: apiFactory,
+  send: sendApi,
   reviveApi: reviveApi
 };
 
-},{"./la":3,"./verify-md5":8}],7:[function(require,module,exports){
+},{"./la":3,"./md5":4,"./minify":5,"./verify-md5":8}],7:[function(require,module,exports){
 function toArray(list) {
   return Array.prototype.slice.call(list, 0);
 }

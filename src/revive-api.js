@@ -30,6 +30,42 @@ function apiFactory(port, methodNames, values, methodHelps) {
   return api;
 }
 
+var md5 = require('./md5');
+la(typeof md5 === 'function', 'cannot find md5 function');
+var removeWhiteSpace = require('./minify');
+
+function sendApi(api, target) {
+  la(target && target.postMessage, 'missing target postMessage function');
+
+  var apiSource = apiFactory.toString();
+  var methodNames = Object.keys(api);
+  var methodHelps = {};
+  // values for non-methods
+  var values = {};
+
+  methodNames.forEach(function (name) {
+    var fn = api[name];
+    if (typeof fn === 'function') {
+      methodHelps[name] = fn.help;
+    } else {
+      values[name] = api[name];
+    }
+  });
+
+  apiSource = removeWhiteSpace(apiSource);
+
+  // TODO(gleb): validate that api source can be recreated back
+
+  target.postMessage({
+    cmd: 'api',
+    source: apiSource,
+    md5: md5(apiSource),
+    methodNames: methodNames,
+    methodHelps: methodHelps,
+    values: values
+  }, '*');
+}
+
 function reviveApi(userOptions, received, port) {
   la(arguments.length === 3, 'missing arguments to revive api');
   la(port && typeof port.postMessage === 'function',
@@ -49,5 +85,6 @@ function reviveApi(userOptions, received, port) {
 
 module.exports = {
   apiFactory: apiFactory,
+  send: sendApi,
   reviveApi: reviveApi
 };
