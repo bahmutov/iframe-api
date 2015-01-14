@@ -36,12 +36,15 @@ function reviveApi(userOptions, received, port) {
     'invalid port object');
   verifyMd5(userOptions, received);
 
+  received.methodNames = Array.isArray(received.methodNames) ? received.methodNames : [];
+  received.methodHelps = Array.isArray(received.methodHelps) ? received.methodHelps : [];
+
   /* jshint -W061 */
   /* eslint no-eval:0 */
   // event.source is the communication channel pointing at iframe
   // it allows posting messages back to the iframe
   return eval('(' + received.source +
-    ')(port, received.apiMethodNames, received.values, received.apiMethodHelps)');
+    ')(port, received.methodNames, received.values, received.methodHelps)');
 }
 
 module.exports = {

@@ -21,25 +21,6 @@ if (isIframed()) {
 
     la(typeof params.callback === 'function', 'need callback function', params);
 
-    var receivedExternalApi = function receivedExternalApi(received) {
-      /* jshint -W061 */
-      /* eslint no-eval:0 */
-      la(typeof received === 'object', 'expected parent api options', received);
-      la(typeof received.source === 'string', 'cannot find source', received);
-      la(Array.isArray(received.methodNames), 'cannot find method names', received);
-      la(typeof received.values === 'object', 'cannot find api property values', received);
-
-      var verifyMd5 = require('./verify-md5');
-      verifyMd5(params.options, received);
-
-      var api = eval('(' + received.source + ')(parent, received.methodNames, received.values)');
-
-      console.log('got an api to the external site');
-      setTimeout(function () {
-        params.callback(null, api);
-      }, 0);
-    };
-
     function messageToApi(e) {
       if (!e.data || !e.data.cmd) {
         console.error('invalid message received by the iframe API', e.data);
@@ -47,7 +28,17 @@ if (isIframed()) {
       }
 
       if (e.data.cmd === 'api') {
-        receivedExternalApi(e.data.args[0]);
+        try {
+          var api = apiMethods.reviveApi(params.options, e.data.args[0], parent);
+          setTimeout(function () {
+            params.callback(null, api);
+          }, 0);
+        } catch (err) {
+          setTimeout(function () {
+            params.callback(err);
+          }, 0);
+        }
+
         return;
       }
 
@@ -73,15 +64,15 @@ if (isIframed()) {
       params.myApi.api = function () {};
 
       var apiSource = apiMethods.apiFactory.toString();
-      var apiMethodNames = Object.keys(params.myApi);
-      var apiMethodHelps = {};
+      var methodNames = Object.keys(params.myApi);
+      var methodHelps = {};
       // values for non-methods
       var values = {};
 
-      apiMethodNames.forEach(function (name) {
+      methodNames.forEach(function (name) {
         var fn = params.myApi[name];
         if (typeof fn === 'function') {
-          apiMethodHelps[name] = fn.help;
+          methodHelps[name] = fn.help;
         } else {
           values[name] = params.myApi[name];
         }
@@ -95,8 +86,8 @@ if (isIframed()) {
         cmd: 'api',
         source: apiSource,
         md5: md5(apiSource),
-        apiMethodNames: apiMethodNames,
-        apiMethodHelps: apiMethodHelps,
+        methodNames: methodNames,
+        methodHelps: methodHelps,
         values: values
       }, '*');
     }
