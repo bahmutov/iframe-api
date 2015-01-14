@@ -13,19 +13,21 @@ var iframeApi = function iframeApi(myApi, userOptions) {
     myApi: myApi,
     options: userOptions || {}
   };
+  var log = params.options.debug || params.options.verbose ?
+    console.log.bind(console) : function noop() {};
 
   return new Promise(function (resolve, reject) {
 
     function processMessage(e) {
       if (!e.data || !e.data.cmd) {
-        console.error('invalid message received by the iframe API', e.data);
+        log('invalid message received by the iframe API', e.data);
         return;
       }
       if (e.data.cmd === 'api') {
         try {
           var api = apiMethods.reviveApi(params.options, e.data, e.source);
           if (!isIframed() && params.myApi) {
-            console.log('sending external api back to the iframe');
+            log('sending external api back to the iframe');
             apiMethods.send(params.myApi, e.source);
           }
           resolve(api);
