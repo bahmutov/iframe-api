@@ -35,7 +35,7 @@ module.exports = function (grunt) {
       test: {
         options: {
           url: 'index.html',
-          timeout: 5 // seconds to wait for any errors
+          timeout: 1 // seconds to wait for any errors
         }
       }
     },
@@ -82,6 +82,16 @@ module.exports = function (grunt) {
           reporter: 'spec'
         },
         src: testFiles
+      }
+    },
+
+    watch: {
+      options: {
+        atBegin: true
+      },
+      all: {
+        files: [sourceFiles, testFiles],
+        tasks: ['test', 'lint']
       }
     }
   });
