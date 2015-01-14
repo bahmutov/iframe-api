@@ -3,7 +3,6 @@
 // in iframe's context
 
 var la = require('./la');
-
 var apiMethods = require('./revive-api');
 var figureOutOptions = require('./figure-out-options');
 
@@ -14,7 +13,6 @@ function iframeApi(myApi, cb, userOptions) {
 
   var frameApi;
 
-  // receives message (possibly from the iframe)
   function processMessage(event) {
 
     if (event.data.cmd === 'api') {
