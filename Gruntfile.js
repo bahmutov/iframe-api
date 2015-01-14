@@ -2,6 +2,7 @@
 module.exports = function (grunt) {
   var sourceFiles = ['src/*.js', '!src/md5.js', 'utils/log-to.js', '!src/*-spec.js'];
   var testFiles = ['src/*-spec.js'];
+  var testPages = ['index.html', 'test/page.html'];
 
   var globalName = 'iframeApi';
 
@@ -81,7 +82,7 @@ module.exports = function (grunt) {
         atBegin: true
       },
       all: {
-        files: [sourceFiles, testFiles],
+        files: [sourceFiles, testFiles, testPages],
         tasks: ['browserify', 'test', 'lint']
       }
     }

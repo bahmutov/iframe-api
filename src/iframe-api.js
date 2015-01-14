@@ -22,7 +22,7 @@ var iframeApi = function iframeApi(myApi, userOptions) {
         var api = apiMethods.reviveApi(params.options, received, port);
         if (!isIframed() && params.myApi) {
           log('sending external api back to the iframe');
-          apiMethods.send(params.myApi, port);
+          apiMethods.send(params.myApi, port, params.options);
         }
         resolve(api);
       } catch (err) {
@@ -60,6 +60,12 @@ var iframeApi = function iframeApi(myApi, userOptions) {
       }
       if (e.data.cmd === '__response') {
         log('received response', e.data.result, 'to command', e.data.id);
+        var defer = iframeApi.__deferred[e.data.id];
+        if (defer) {
+          la(typeof defer.resolve === 'function', 'missing resolve method for', e.data.id);
+          defer.resolve(e.data.result);
+          delete iframeApi.__deferred[e.data.id];
+        }
         return;
       }
 
@@ -68,7 +74,7 @@ var iframeApi = function iframeApi(myApi, userOptions) {
     window.addEventListener('message', processMessage);
 
     if (isIframed() && params.myApi) {
-      apiMethods.send(params.myApi, parent);
+      apiMethods.send(params.myApi, parent, params.options);
     }
   });
 };

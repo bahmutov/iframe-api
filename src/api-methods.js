@@ -1,6 +1,8 @@
 var verifyMd5 = require('./verify-md5');
 var la = require('./la');
 
+/* global iframeApi */
+/* eslint no-new:0 */
 function apiFactory(port, methodNames, values, methodHelps) {
   values = values || {};
   methodHelps = methodHelps || {};
@@ -10,6 +12,8 @@ function apiFactory(port, methodNames, values, methodHelps) {
   }
 
   var id = 0;
+  iframeApi.__deferred = [];
+
   function send(cmd) {
     id += 1;
     port.postMessage({
@@ -17,7 +21,14 @@ function apiFactory(port, methodNames, values, methodHelps) {
       args: Array.prototype.slice.call(arguments, 1),
       id: id
     }, '*');
+    return new Promise(function (resolve, reject) {
+      iframeApi.__deferred[id] = {
+        resolve: resolve.bind(this),
+        reject: reject.bind(this)
+      };
+    });
   }
+
   var api = {};
   methodNames.forEach(function (name) {
     if (values[name]) {
@@ -35,10 +46,11 @@ function apiFactory(port, methodNames, values, methodHelps) {
 
 var md5 = require('./md5');
 la(typeof md5 === 'function', 'cannot find md5 function');
-var removeWhiteSpace = require('./minify');
+var minify = require('./minify');
 
-function sendApi(api, target) {
+function sendApi(api, target, options) {
   la(target && target.postMessage, 'missing target postMessage function');
+  options = options || {};
 
   var apiSource = apiFactory.toString();
   var methodNames = Object.keys(api);
@@ -55,7 +67,9 @@ function sendApi(api, target) {
     }
   });
 
-  apiSource = removeWhiteSpace(apiSource);
+  if (!options.debug) {
+    apiSource = minify(apiSource);
+  }
 
   // TODO(gleb): validate that api source can be recreated back
 

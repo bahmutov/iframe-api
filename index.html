@@ -56,6 +56,13 @@
           api.bar('hi from external site');
         });
         btn.style.display = '';
+
+        // try calling a method
+        api.bar().then(function (result) {
+          if (result !== 'bar') {
+            throw new Error('invalid result from .bar() ' + result);
+          }
+        });
       }
 
       function error(err) {
