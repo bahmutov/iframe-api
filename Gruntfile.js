@@ -91,7 +91,7 @@ module.exports = function (grunt) {
       },
       all: {
         files: [sourceFiles, testFiles],
-        tasks: ['test', 'lint']
+        tasks: ['browserify', 'test', 'lint']
       }
     }
   });

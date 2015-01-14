@@ -74,8 +74,9 @@ if (isIframed()) {
 
   // this function recreates the API object from source
   // TODO combine with similar function in external api
-  var reviveApi = require('./revive-api');
-  la(typeof reviveApi === 'function', 'missing revive api function');
+  var apiMethods = require('./revive-api');
+  la(typeof apiMethods.reviveApi === 'function',
+    'missing revive api function');
 
   var removeWhiteSpace = require('./minify');
   var figureOutOptions = require('./figure-out-options');
@@ -136,7 +137,7 @@ if (isIframed()) {
       // placeholder for API method to send parent's api back to iframe
       params.myApi.api = function () {};
 
-      var apiSource = reviveApi.toString();
+      var apiSource = apiMethods.apiFactory.toString();
       var apiMethodNames = Object.keys(params.myApi);
       var apiMethodHelps = {};
       // values for non-methods
@@ -392,12 +393,19 @@ function removeWhiteSpace(src) {
 module.exports = removeWhiteSpace;
 
 },{"./la":3}],6:[function(require,module,exports){
-function reviveApi(returnPort, methodNames, values, methodHelps) {
+var verifyMd5 = require('./verify-md5');
+var la = require('./la');
+
+function apiFactory(port, methodNames, values, methodHelps) {
   values = values || {};
   methodHelps = methodHelps || {};
 
+  if (typeof port.postMessage !== 'function') {
+    throw new Error('Invalid port - does not have postMessage');
+  }
+
   function send(cmd) {
-    returnPort.postMessage({
+    port.postMessage({
       cmd: cmd,
       args: Array.prototype.slice.call(arguments, 1)
     }, '*');
@@ -417,9 +425,26 @@ function reviveApi(returnPort, methodNames, values, methodHelps) {
   return api;
 }
 
-module.exports = reviveApi;
+function reviveApi(userOptions, received, port) {
+  la(arguments.length === 3, 'missing arguments to revive api');
+  la(port && typeof port.postMessage === 'function',
+    'invalid port object');
+  verifyMd5(userOptions, received);
 
-},{}],7:[function(require,module,exports){
+  /* jshint -W061 */
+  /* eslint no-eval:0 */
+  // event.source is the communication channel pointing at iframe
+  // it allows posting messages back to the iframe
+  return eval('(' + received.source +
+    ')(port, received.apiMethodNames, received.values, received.apiMethodHelps)');
+}
+
+module.exports = {
+  apiFactory: apiFactory,
+  reviveApi: reviveApi
+};
+
+},{"./la":3,"./verify-md5":8}],7:[function(require,module,exports){
 function toArray(list) {
   return Array.prototype.slice.call(list, 0);
 }

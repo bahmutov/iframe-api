@@ -9,8 +9,9 @@ if (isIframed()) {
 
   // this function recreates the API object from source
   // TODO combine with similar function in external api
-  var reviveApi = require('./revive-api');
-  la(typeof reviveApi === 'function', 'missing revive api function');
+  var apiMethods = require('./revive-api');
+  la(typeof apiMethods.reviveApi === 'function',
+    'missing revive api function');
 
   var removeWhiteSpace = require('./minify');
   var figureOutOptions = require('./figure-out-options');
@@ -71,7 +72,7 @@ if (isIframed()) {
       // placeholder for API method to send parent's api back to iframe
       params.myApi.api = function () {};
 
-      var apiSource = reviveApi.toString();
+      var apiSource = apiMethods.apiFactory.toString();
       var apiMethodNames = Object.keys(params.myApi);
       var apiMethodHelps = {};
       // values for non-methods

@@ -6,32 +6,20 @@ var md5 = require('./md5');
 var la = require('./la');
 la(typeof md5 === 'function', 'cannot find md5 function');
 
-var makeExternalApi = require('./revive-api');
+var apiMethods = require('./revive-api');
 var figureOutOptions = require('./figure-out-options');
 
 function iframeApi(myApi, cb, userOptions) {
   var params = figureOutOptions(myApi, cb, userOptions);
-
+  la(params, 'could not figure out options');
   params.options = params.options || {};
 
   var frameApi;
 
-  var verifyMd5 = require('./verify-md5');
   var removeWhiteSpace = require('./minify');
 
   // receives message (possibly from the iframe)
   function processMessage(event) {
-
-    function reviveApi(opts) {
-      verifyMd5(params.options, opts);
-
-      /* jshint -W061 */
-      /* eslint no-eval:0 */
-      // event.source is the communication channel pointing at iframe
-      // it allows posting messages back to the iframe
-      return eval('(' + opts.source +
-        ')(event.source, opts.apiMethodNames, opts.values, opts.apiMethodHelps)');
-    }
 
     function sendExternalApi(frameApi) {
       console.assert(frameApi, 'missing frame api');
@@ -41,7 +29,7 @@ function iframeApi(myApi, cb, userOptions) {
         console.assert(typeof frameApi.api === 'function', 'missing frameApi.api', frameApi);
 
         var methodNames = Object.keys(params.myApi);
-        var source = makeExternalApi.toString();
+        var source = apiMethods.apiFactory.toString();
         source = removeWhiteSpace(source);
 
         var values = {};
@@ -62,7 +50,7 @@ function iframeApi(myApi, cb, userOptions) {
 
     if (event.data.cmd === 'api') {
       try {
-        frameApi = reviveApi(event.data);
+        frameApi = apiMethods.reviveApi(params.options, event.data, event.source);
         sendExternalApi(frameApi);
         // we no longer need to api method
         delete frameApi.api;

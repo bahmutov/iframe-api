@@ -47,6 +47,9 @@
         }
         console.log('received api from iframe with version', api.version);
         console.log('api methods:', Object.keys(api));
+        if (api.version !== '0.1.0') {
+          throw new Error('invalid iframe version ' + api);
+        }
 
         var btn = document.getElementById('btn');
         btn.addEventListener('click', function () {

@@ -37,6 +37,10 @@
         console.log('iframe has external api object, version', externalApi.version);
         console.log('api methods:', Object.keys(externalApi));
 
+        if (externalApi.version !== '1.0.0') {
+          throw new Error('invalid iframe version ' + JSON.stringify(externalApi));
+        }
+
         var btn = document.getElementById('btn');
         btn.addEventListener('click', function () {
           console.log('button clicked, calling method on external api');
