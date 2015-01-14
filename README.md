@@ -105,6 +105,18 @@ var options = {
 };
 ```
 
+## Calling remote methods
+
+You can pass arguments to remove API. Each method call returns a promise object
+
+```js
+iframeApi(...).then(function (remoteApi) {
+  remoteApi.foo('a', 'b', 'c').then(function (result) {
+    console.log('remoteApi.foo(a, b, c) returned', result);
+  });
+});
+```
+
 ### Small print
 
 Author: Gleb Bahmutov &copy; 2015
