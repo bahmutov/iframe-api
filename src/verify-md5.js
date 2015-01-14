@@ -5,6 +5,8 @@ function verifyMd5(options, received) {
   options = options || {};
   received = received || {};
 
+  // console.log(received.md5);
+
   var computedMD5;
   if (typeof options.md5 === 'boolean' && options.md5) {
     computedMD5 = md5(received.source);

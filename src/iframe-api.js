@@ -6,7 +6,7 @@ function isIframed() {
   return parent !== window;
 }
 
-var apiMethods = require('./revive-api');
+var apiMethods = require('./api-methods');
 
 var iframeApi = function iframeApi(myApi, userOptions) {
   var params = {

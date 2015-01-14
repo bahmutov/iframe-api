@@ -74,7 +74,7 @@ Single function `iframeApi(myApiObject, options)` returns a promise with resolve
   - if empty object, the other side will receive empty object
   - can have methods and properties
 
-example
+**api object example**
 
 ```js
 var myApi = {
@@ -94,6 +94,16 @@ var myApi = {
     + if `true` this side will compute md5 checksum of the 
     received source and compare to declared before reviving api object.
     + if a string, takes it as the md5 checksum to be compared against computed.
+
+**options example**
+
+```js
+// do not recreate received api, unless its MD5 matches given string
+var options = {
+  debug: false,
+  md5: '845998b5f8907e585c31874ec5cc79a0'
+};
+```
 
 ### Small print
 

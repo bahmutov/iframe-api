@@ -1050,6 +1050,98 @@ process.chdir = function (dir) {
 };
 
 },{}],3:[function(require,module,exports){
+var verifyMd5 = require('./verify-md5');
+var la = require('./la');
+
+function apiFactory(port, methodNames, values, methodHelps) {
+  values = values || {};
+  methodHelps = methodHelps || {};
+
+  if (typeof port.postMessage !== 'function') {
+    throw new Error('Invalid port - does not have postMessage');
+  }
+
+  function send(cmd) {
+    port.postMessage({
+      cmd: cmd,
+      args: Array.prototype.slice.call(arguments, 1)
+    }, '*');
+  }
+  var api = {};
+  methodNames.forEach(function (name) {
+    if (values[name]) {
+      api[name] = values[name];
+    } else {
+      api[name] = send.bind(null, name);
+    }
+    if (methodHelps[name]) {
+      api[name].help = methodHelps[name];
+    }
+  });
+
+  return api;
+}
+
+var md5 = require('./md5');
+la(typeof md5 === 'function', 'cannot find md5 function');
+var removeWhiteSpace = require('./minify');
+
+function sendApi(api, target) {
+  la(target && target.postMessage, 'missing target postMessage function');
+
+  var apiSource = apiFactory.toString();
+  var methodNames = Object.keys(api);
+  var methodHelps = {};
+  // values for non-methods
+  var values = {};
+
+  methodNames.forEach(function (name) {
+    var fn = api[name];
+    if (typeof fn === 'function') {
+      methodHelps[name] = fn.help;
+    } else {
+      values[name] = api[name];
+    }
+  });
+
+  apiSource = removeWhiteSpace(apiSource);
+
+  // TODO(gleb): validate that api source can be recreated back
+
+  target.postMessage({
+    cmd: 'api',
+    source: apiSource,
+    md5: md5(apiSource),
+    methodNames: methodNames,
+    methodHelps: methodHelps,
+    values: values
+  }, '*');
+}
+
+function reviveApi(userOptions, received, port) {
+  la(arguments.length === 3, 'missing arguments to revive api');
+  la(port && typeof port.postMessage === 'function',
+    'invalid port object');
+  verifyMd5(userOptions, received);
+
+  received.methodNames = Array.isArray(received.methodNames) ? received.methodNames : [];
+  received.methodHelps = Array.isArray(received.methodHelps) ? received.methodHelps : [];
+
+  /* jshint -W061 */
+  /* eslint no-eval:0 */
+  // event.source is the communication channel pointing at iframe
+  // it allows posting messages back to the iframe
+  return eval('(' + received.source +
+    ')(port, received.methodNames, received.values, received.methodHelps)');
+}
+
+module.exports = {
+  apiFactory: apiFactory,
+  send: sendApi,
+  reviveApi: reviveApi
+};
+
+},{"./la":5,"./md5":6,"./minify":7,"./verify-md5":9}],4:[function(require,module,exports){
 // to be run from <iframe src="..." ...></iframe>
 
 require('es6-promise').polyfill();
@@ -1058,7 +1150,7 @@ function isIframed() {
   return parent !== window;
 }
 
-var apiMethods = require('./revive-api');
+var apiMethods = require('./api-methods');
 
 var iframeApi = function iframeApi(myApi, userOptions) {
   var params = {
@@ -1109,7 +1201,7 @@ var iframeApi = function iframeApi(myApi, userOptions) {
 
 module.exports = iframeApi;
 
-},{"./revive-api":7,"es6-promise":1}],4:[function(require,module,exports){
+},{"./api-methods":3,"es6-promise":1}],5:[function(require,module,exports){
 var toArray = require('./to-array');
 
 function la(condition) {
@@ -1123,7 +1215,7 @@ function la(condition) {
 
 module.exports = la;
 
-},{"./to-array":8}],5:[function(require,module,exports){
+},{"./to-array":8}],6:[function(require,module,exports){
 // utility - MD5 computation from
 var md5 = (function md5init() {
 
@@ -1322,7 +1414,7 @@ if (md5('hello') != '5d41402abc4b2a76b9719d911017c592') {
 
 module.exports = md5;
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 var la = require('./la');
 function removeWhiteSpace(src) {
   la(src, 'missing source', src);
@@ -1331,99 +1423,7 @@ function removeWhiteSpace(src) {
 
 module.exports = removeWhiteSpace;
 
-},{"./la":4}],7:[function(require,module,exports){
-var verifyMd5 = require('./verify-md5');
-var la = require('./la');
-
-function apiFactory(port, methodNames, values, methodHelps) {
-  values = values || {};
-  methodHelps = methodHelps || {};
-
-  if (typeof port.postMessage !== 'function') {
-    throw new Error('Invalid port - does not have postMessage');
-  }
-
-  function send(cmd) {
-    port.postMessage({
-      cmd: cmd,
-      args: Array.prototype.slice.call(arguments, 1)
-    }, '*');
-  }
-  var api = {};
-  methodNames.forEach(function (name) {
-    if (values[name]) {
-      api[name] = values[name];
-    } else {
-      api[name] = send.bind(null, name);
-    }
-    if (methodHelps[name]) {
-      api[name].help = methodHelps[name];
-    }
-  });
-
-  return api;
-}
-
-var md5 = require('./md5');
-la(typeof md5 === 'function', 'cannot find md5 function');
-var removeWhiteSpace = require('./minify');
-
-function sendApi(api, target) {
-  la(target && target.postMessage, 'missing target postMessage function');
-
-  var apiSource = apiFactory.toString();
-  var methodNames = Object.keys(api);
-  var methodHelps = {};
-  // values for non-methods
-  var values = {};
-
-  methodNames.forEach(function (name) {
-    var fn = api[name];
-    if (typeof fn === 'function') {
-      methodHelps[name] = fn.help;
-    } else {
-      values[name] = api[name];
-    }
-  });
-
-  apiSource = removeWhiteSpace(apiSource);
-
-  // TODO(gleb): validate that api source can be recreated back
-
-  target.postMessage({
-    cmd: 'api',
-    source: apiSource,
-    md5: md5(apiSource),
-    methodNames: methodNames,
-    methodHelps: methodHelps,
-    values: values
-  }, '*');
-}
-
-function reviveApi(userOptions, received, port) {
-  la(arguments.length === 3, 'missing arguments to revive api');
-  la(port && typeof port.postMessage === 'function',
-    'invalid port object');
-  verifyMd5(userOptions, received);
-
-  received.methodNames = Array.isArray(received.methodNames) ? received.methodNames : [];
-  received.methodHelps = Array.isArray(received.methodHelps) ? received.methodHelps : [];
-
-  /* jshint -W061 */
-  /* eslint no-eval:0 */
-  // event.source is the communication channel pointing at iframe
-  // it allows posting messages back to the iframe
-  return eval('(' + received.source +
-    ')(port, received.methodNames, received.values, received.methodHelps)');
-}
-
-module.exports = {
-  apiFactory: apiFactory,
-  send: sendApi,
-  reviveApi: reviveApi
-};
-
-},{"./la":4,"./md5":5,"./minify":6,"./verify-md5":9}],8:[function(require,module,exports){
+},{"./la":5}],8:[function(require,module,exports){
 function toArray(list) {
   return Array.prototype.slice.call(list, 0);
 }
@@ -1436,6 +1436,8 @@ var md5 = require('./md5');
 function verifyMd5(options, received) {
   options = options || {};
   received = received || {};
+
+  // console.log(received.md5);
 
   var computedMD5;
   if (typeof options.md5 === 'boolean' && options.md5) {
@@ -1451,5 +1453,5 @@ function verifyMd5(options, received) {
 
 module.exports = verifyMd5;
 
-},{"./la":4,"./md5":5}]},{},[3])(3)
+},{"./la":5,"./md5":6}]},{},[4])(4)
 });
