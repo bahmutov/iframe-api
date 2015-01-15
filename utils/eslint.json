@@ -16,7 +16,7 @@
     "no-undef": 1,
     "no-console": 0,
     "no-unused-vars": 1,
-    "no-underscore-dangle": 1,
+    "no-underscore-dangle": 0,
     "quotes": [2, "single"],
     "brace-style": [2, "1tbs"],
     "eol-last": 2,

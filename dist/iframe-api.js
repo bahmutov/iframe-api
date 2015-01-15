@@ -1123,12 +1123,13 @@ var iframeApi = function iframeApi(myApi, userOptions) {
           return receiveApi(e.data, e.source);
         }
         case '__method_response': {
-          log('received response', e.data.result, 'to command', e.data.id);
-          var defer = iframeApi.__deferred[e.data.id];
+          log('received response', e.data.result, 'to command', e.data.__stamp);
+          var defer = iframeApi.__deferred[e.data.__stamp];
           if (defer) {
-            la(typeof defer.resolve === 'function', 'missing resolve method for', e.data.id);
+            la(typeof defer.resolve === 'function', 'missing resolve method for', e.data.__stamp);
+            delete e.data.__stamp;
             defer.resolve(e.data.result);
-            delete iframeApi.__deferred[e.data.id];
+            delete iframeApi.__deferred[e.data.__stamp];
           }
           return;
         }
@@ -1178,20 +1179,26 @@ function apiFactory(port, methodNames, values, methodHelps) {
   var id = 0;
   iframeApi.__deferred = [];
 
-  function send(cmd) {
+  function stamp(address, data) {
     id += 1;
 
-    post(port, {
-      cmd: cmd,
-      args: Array.prototype.slice.call(arguments, 1),
-      id: id
-    });
+    data.__stamp = id;
+
+    post(address, data);
 
     return new Promise(function (resolve, reject) {
       iframeApi.__deferred[id] = {
         resolve: resolve.bind(this),
         reject: reject.bind(this)
       };
+    });
+  }
+  var stampIt = stamp.bind(null, port);
+
+  function send(cmd) {
+    return stampIt({
+      cmd: cmd,
+      args: Array.prototype.slice.call(arguments, 1)
     });
   }
 
@@ -1251,13 +1258,13 @@ function sendApi(api, target, options) {
 
 // sending result for command back to the caller
 function respond(port, commandData, result) {
-  la(typeof commandData === 'object' && commandData.id,
-    'missing command id', commandData);
+  la(typeof commandData === 'object' && commandData.__stamp,
+    'missing command __stamp', commandData);
 
-  console.log('responding to command', commandData.id, 'with', result);
+  console.log('responding to command', commandData.__stamp, 'with', result);
   post(port, {
     cmd: '__method_response',
-    id: commandData.id,
+    __stamp: commandData.__stamp,
     result: result
   });
 }

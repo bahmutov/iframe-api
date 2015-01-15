@@ -71,12 +71,13 @@ var iframeApi = function iframeApi(myApi, userOptions) {
           return receiveApi(e.data, e.source);
         }
         case '__method_response': {
-          log('received response', e.data.result, 'to command', e.data.id);
-          var defer = iframeApi.__deferred[e.data.id];
+          log('received response', e.data.result, 'to command', e.data.__stamp);
+          var defer = iframeApi.__deferred[e.data.__stamp];
           if (defer) {
-            la(typeof defer.resolve === 'function', 'missing resolve method for', e.data.id);
+            la(typeof defer.resolve === 'function', 'missing resolve method for', e.data.__stamp);
+            delete e.data.__stamp;
             defer.resolve(e.data.result);
-            delete iframeApi.__deferred[e.data.id];
+            delete iframeApi.__deferred[e.data.__stamp];
           }
           return;
         }

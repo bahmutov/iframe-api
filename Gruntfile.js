@@ -8,6 +8,15 @@ module.exports = function (grunt) {
 
   grunt.initConfig({
 
+    filenames: {
+      options: {
+        valid: 'dashes',
+        except: 'verify-md5.js'
+      },
+      src: sourceFiles,
+      test: testFiles
+    },
+
     jshint: {
       all: sourceFiles,
       test: testFiles,
@@ -91,7 +100,7 @@ module.exports = function (grunt) {
   var plugins = module.require('matchdep').filterDev('grunt-*');
   plugins.forEach(grunt.loadNpmTasks);
 
-  grunt.registerTask('lint', ['jshint', 'eslint', 'jscs']);
+  grunt.registerTask('lint', ['filenames', 'jshint', 'eslint', 'jscs']);
   grunt.registerTask('test', ['mochaTest', 'clean-console']);
   grunt.registerTask('default', ['deps-ok', 'nice-package', 'lint', 'sync', 'browserify', 'test']);
 };
