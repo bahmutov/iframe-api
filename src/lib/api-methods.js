@@ -1,6 +1,10 @@
 var verifyMd5 = require('./verify-md5');
 var la = require('./la');
 
+function post(port, msg) {
+  port.postMessage(msg, '*');
+}
+
 /* global iframeApi */
 /* eslint no-new:0 */
 function apiFactory(port, methodNames, values, methodHelps) {
@@ -16,11 +20,13 @@ function apiFactory(port, methodNames, values, methodHelps) {
 
   function send(cmd) {
     id += 1;
-    port.postMessage({
+
+    post(port, {
       cmd: cmd,
       args: Array.prototype.slice.call(arguments, 1),
       id: id
-    }, '*');
+    });
+
     return new Promise(function (resolve, reject) {
       iframeApi.__deferred[id] = {
         resolve: resolve.bind(this),
@@ -73,14 +79,14 @@ function sendApi(api, target, options) {
 
   // TODO(gleb): validate that api source can be recreated back
 
-  target.postMessage({
+  post(target, {
     cmd: '__api',
     source: apiSource,
     md5: md5(apiSource),
     methodNames: methodNames,
     methodHelps: methodHelps,
     values: values
-  }, '*');
+  });
 }
 
 // sending result for command back to the caller
@@ -89,11 +95,18 @@ function respond(port, commandData, result) {
     'missing command id', commandData);
 
   console.log('responding to command', commandData.id, 'with', result);
-  port.postMessage({
-    cmd: '__response',
+  post(port, {
+    cmd: '__method_response',
     id: commandData.id,
     result: result
-  }, '*');
+  });
+}
+
+function handshake(port, options) {
+  post(port, {
+    cmd: '__handshake',
+    options: options
+  });
 }
 
 function reviveApi(userOptions, received, port) {
@@ -114,6 +127,7 @@ function reviveApi(userOptions, received, port) {
 }
 
 module.exports = {
+  handshake: handshake,
   apiFactory: apiFactory,
   send: sendApi,
   reviveApi: reviveApi,

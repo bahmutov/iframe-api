@@ -17,6 +17,14 @@ var iframeApi = function iframeApi(myApi, userOptions) {
 
   return new Promise(function (resolve, reject) {
 
+    function handshake(callerOptions, port) {
+      console.log('handshake with caller', JSON.stringify(callerOptions));
+      if (!isIframed()) {
+        log('responding to handshake');
+        apiMethods.handshake(port, params.options);
+      }
+    }
+
     function receiveApi(received, port) {
       try {
         var api = apiMethods.reviveApi(params.options, received, port);
@@ -55,26 +63,42 @@ var iframeApi = function iframeApi(myApi, userOptions) {
         log('invalid message received by the iframe API', e.data);
         return;
       }
-      if (e.data.cmd === '__api') {
-        return receiveApi(e.data, e.source);
-      }
-      if (e.data.cmd === '__response') {
-        log('received response', e.data.result, 'to command', e.data.id);
-        var defer = iframeApi.__deferred[e.data.id];
-        if (defer) {
-          la(typeof defer.resolve === 'function', 'missing resolve method for', e.data.id);
-          defer.resolve(e.data.result);
-          delete iframeApi.__deferred[e.data.id];
+      switch (e.data.cmd) {
+        case '__handshake': {
+          return handshake(e.data, e.source);
         }
-        return;
+        case '__api': {
+          return receiveApi(e.data, e.source);
+        }
+        case '__method_response': {
+          log('received response', e.data.result, 'to command', e.data.id);
+          var defer = iframeApi.__deferred[e.data.id];
+          if (defer) {
+            la(typeof defer.resolve === 'function', 'missing resolve method for', e.data.id);
+            defer.resolve(e.data.result);
+            delete iframeApi.__deferred[e.data.id];
+          }
+          return;
+        }
+        default: {
+          return callApiMethod(e.data, e.source);
+        }
       }
 
-      callApiMethod(e.data, e.source);
     }
     window.addEventListener('message', processMessage);
 
     if (isIframed() && params.myApi) {
+      apiMethods.handshake(parent, params.options);
       apiMethods.send(params.myApi, parent, params.options);
+      /*
+        TODO switch to promise-returning handshake
+        apiMethods.handshake(parent, params.options)
+          .then(function (optionsFromOtherSide) {
+            var api = typeof params.myApi === 'function' ? params.myApi(optionsFromOtherSide) : params.myApi;
+            apiMethods.send(params.myApi, parent, params.options);
+          });
+      */
     }
   });
 };

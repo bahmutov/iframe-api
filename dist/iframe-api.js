@@ -1069,6 +1069,14 @@ var iframeApi = function iframeApi(myApi, userOptions) {
 
   return new Promise(function (resolve, reject) {
 
+    function handshake(callerOptions, port) {
+      console.log('handshake with caller', JSON.stringify(callerOptions));
+      if (!isIframed()) {
+        log('responding to handshake');
+        apiMethods.handshake(port, params.options);
+      }
+    }
+
     function receiveApi(received, port) {
       try {
         var api = apiMethods.reviveApi(params.options, received, port);
@@ -1107,26 +1115,42 @@ var iframeApi = function iframeApi(myApi, userOptions) {
         log('invalid message received by the iframe API', e.data);
         return;
       }
-      if (e.data.cmd === '__api') {
-        return receiveApi(e.data, e.source);
-      }
-      if (e.data.cmd === '__response') {
-        log('received response', e.data.result, 'to command', e.data.id);
-        var defer = iframeApi.__deferred[e.data.id];
-        if (defer) {
-          la(typeof defer.resolve === 'function', 'missing resolve method for', e.data.id);
-          defer.resolve(e.data.result);
-          delete iframeApi.__deferred[e.data.id];
+      switch (e.data.cmd) {
+        case '__handshake': {
+          return handshake(e.data, e.source);
         }
-        return;
+        case '__api': {
+          return receiveApi(e.data, e.source);
+        }
+        case '__method_response': {
+          log('received response', e.data.result, 'to command', e.data.id);
+          var defer = iframeApi.__deferred[e.data.id];
+          if (defer) {
+            la(typeof defer.resolve === 'function', 'missing resolve method for', e.data.id);
+            defer.resolve(e.data.result);
+            delete iframeApi.__deferred[e.data.id];
+          }
+          return;
+        }
+        default: {
+          return callApiMethod(e.data, e.source);
+        }
       }
 
-      callApiMethod(e.data, e.source);
     }
     window.addEventListener('message', processMessage);
 
     if (isIframed() && params.myApi) {
+      apiMethods.handshake(parent, params.options);
       apiMethods.send(params.myApi, parent, params.options);
+      /*
+        TODO switch to promise-returning handshake
+        apiMethods.handshake(parent, params.options)
+          .then(function (optionsFromOtherSide) {
+            var api = typeof params.myApi === 'function' ? params.myApi(optionsFromOtherSide) : params.myApi;
+            apiMethods.send(params.myApi, parent, params.options);
+          });
+      */
     }
   });
 };
@@ -1136,6 +1160,10 @@ module.exports = iframeApi;
 },{"./lib/api-methods":4,"./lib/la":5,"es6-promise":1}],4:[function(require,module,exports){
 var verifyMd5 = require('./verify-md5');
 var la = require('./la');
+
+function post(port, msg) {
+  port.postMessage(msg, '*');
+}
 
 /* global iframeApi */
 /* eslint no-new:0 */
@@ -1152,11 +1180,13 @@ function apiFactory(port, methodNames, values, methodHelps) {
 
   function send(cmd) {
     id += 1;
-    port.postMessage({
+
+    post(port, {
       cmd: cmd,
       args: Array.prototype.slice.call(arguments, 1),
       id: id
-    }, '*');
+    });
+
     return new Promise(function (resolve, reject) {
       iframeApi.__deferred[id] = {
         resolve: resolve.bind(this),
@@ -1209,14 +1239,14 @@ function sendApi(api, target, options) {
 
   // TODO(gleb): validate that api source can be recreated back
 
-  target.postMessage({
+  post(target, {
     cmd: '__api',
     source: apiSource,
     md5: md5(apiSource),
     methodNames: methodNames,
     methodHelps: methodHelps,
     values: values
-  }, '*');
+  });
 }
 
 // sending result for command back to the caller
@@ -1225,11 +1255,18 @@ function respond(port, commandData, result) {
     'missing command id', commandData);
 
   console.log('responding to command', commandData.id, 'with', result);
-  port.postMessage({
-    cmd: '__response',
+  post(port, {
+    cmd: '__method_response',
     id: commandData.id,
     result: result
-  }, '*');
+  });
+}
+
+function handshake(port, options) {
+  post(port, {
+    cmd: '__handshake',
+    options: options
+  });
 }
 
 function reviveApi(userOptions, received, port) {
@@ -1250,6 +1287,7 @@ function reviveApi(userOptions, received, port) {
 }
 
 module.exports = {
+  handshake: handshake,
   apiFactory: apiFactory,
   send: sendApi,
   reviveApi: reviveApi,
