@@ -8,7 +8,11 @@ function peel(cargo) {
     delete cargo.stamp;
     delete stamp.__deferred[cargo.stamp];
     // TODO handle errors by calling defer.reject
-    defer.resolve(cargo.payload);
+    if (!cargo.payload) {
+      throw new Error('missing payload in', cargo);
+    }
+    var result = Array.isArray(cargo.payload.args) && cargo.payload.args[0];
+    defer.resolve(result);
   }
 }
 

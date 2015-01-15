@@ -76,7 +76,8 @@ var iframeApi = function iframeApi(myApi, userOptions) {
           return receiveApi(data, e.source);
         }
         case '__method_response': {
-          log('received response', data.result, 'to command', data.stamp);
+          la(e.data.stamp, 'missing return stamp', e.data);
+          log('received response', data.args[0], 'to command', e.data.stamp);
           return stamp(e.data);
         }
         default: {

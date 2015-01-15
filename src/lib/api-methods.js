@@ -84,11 +84,15 @@ function respond(port, commandData, result) {
     'missing command stamp', commandData);
 
   console.log('responding to command', commandData.stamp, 'with', result);
-  post(port, {
+
+  var stampIt = stamp.bind(null, post, port);
+
+  commandData.payload = {
     cmd: '__method_response',
-    stamp: commandData.stamp,
-    result: result
-  });
+    args: [result]
+  };
+
+  stampIt(commandData);
 }
 
 function handshake(port, options) {

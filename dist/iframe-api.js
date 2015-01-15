@@ -1128,7 +1128,8 @@ var iframeApi = function iframeApi(myApi, userOptions) {
           return receiveApi(data, e.source);
         }
         case '__method_response': {
-          log('received response', data.result, 'to command', data.stamp);
+          la(e.data.stamp, 'missing return stamp', e.data);
+          log('received response', data.args[0], 'to command', e.data.stamp);
           return stamp(e.data);
         }
         default: {
@@ -1244,11 +1245,15 @@ function respond(port, commandData, result) {
     'missing command stamp', commandData);
 
   console.log('responding to command', commandData.stamp, 'with', result);
-  post(port, {
+
+  var stampIt = stamp.bind(null, post, port);
+
+  commandData.payload = {
     cmd: '__method_response',
-    stamp: commandData.stamp,
-    result: result
-  });
+    args: [result]
+  };
+
+  stampIt(commandData);
 }
 
 function handshake(port, options) {
@@ -1516,7 +1521,11 @@ function peel(cargo) {
     delete cargo.stamp;
     delete stamp.__deferred[cargo.stamp];
     // TODO handle errors by calling defer.reject
-    defer.resolve(cargo.payload);
+    if (!cargo.payload) {
+      throw new Error('missing payload in', cargo);
+    }
+    var result = Array.isArray(cargo.payload.args) && cargo.payload.args[0];
+    defer.resolve(result);
   }
 }
 
