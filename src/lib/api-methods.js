@@ -80,13 +80,13 @@ function sendApi(api, target, options) {
 
 // sending result for command back to the caller
 function respond(port, commandData, result) {
-  la(typeof commandData === 'object' && commandData.__stamp,
-    'missing command __stamp', commandData);
+  la(typeof commandData === 'object' && commandData.stamp,
+    'missing command stamp', commandData);
 
-  console.log('responding to command', commandData.__stamp, 'with', result);
+  console.log('responding to command', commandData.stamp, 'with', result);
   post(port, {
     cmd: '__method_response',
-    __stamp: commandData.__stamp,
+    stamp: commandData.stamp,
     result: result
   });
 }

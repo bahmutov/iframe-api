@@ -39,7 +39,7 @@ var iframeApi = function iframeApi(myApi, userOptions) {
       }
     }
 
-    function callApiMethod(data, port) {
+    function callApiMethod(data) {
       var cmd = data.cmd;
       var args = data.args;
       la(typeof cmd === 'string', 'missing command string', cmd);
@@ -52,7 +52,7 @@ var iframeApi = function iframeApi(myApi, userOptions) {
         if (typeof method === 'function') {
           var result = method.apply(params.myApi, args);
           log('method', cmd, 'result', JSON.stringify(result));
-          apiMethods.respond(port, data, result);
+          return result;
         } else {
           log('unknown command', cmd, 'from the parent');
         }
@@ -60,23 +60,28 @@ var iframeApi = function iframeApi(myApi, userOptions) {
     }
 
     function processMessage(e) {
-      if (!e.data || !e.data.cmd) {
-        log('invalid message received by the iframe API', e.data);
-        return;
+      la(e.data, 'expected message with data');
+      var data = e.data.payload ? e.data.payload : e.data;
+
+      if (!data || !data.cmd) {
+        var msg = 'invalid message received by the iframe API';
+        log(msg);
+        throw new Error(msg);
       }
-      switch (e.data.cmd) {
+      switch (data.cmd) {
         case '__handshake': {
-          return handshake(e.data, e.source);
+          return handshake(data, e.source);
         }
         case '__api': {
-          return receiveApi(e.data, e.source);
+          return receiveApi(data, e.source);
         }
         case '__method_response': {
-          log('received response', e.data.result, 'to command', e.data.__stamp);
+          log('received response', data.result, 'to command', data.stamp);
           return stamp(e.data);
         }
         default: {
-          return callApiMethod(e.data, e.source);
+          var result = callApiMethod(data, e);
+          apiMethods.respond(e.source, e.data, result);
         }
       }
 

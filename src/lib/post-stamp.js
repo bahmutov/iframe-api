@@ -1,23 +1,33 @@
 /* eslint no-use-before-define:0 */
-function peel(data) {
-  var defer = stamp.__deferred[data.__stamp];
+function peel(cargo) {
+  var defer = stamp.__deferred[cargo.stamp];
   if (defer) {
     if (typeof defer.resolve !== 'function') {
-      throw new Error('missing resolve method for ' + data.__stamp);
+      throw new Error('missing resolve method for ' + cargo.stamp);
     }
-    delete data.__stamp;
-    delete stamp.__deferred[data.__stamp];
+    delete cargo.stamp;
+    delete stamp.__deferred[cargo.stamp];
     // TODO handle errors by calling defer.reject
-    defer.resolve(data.result);
+    defer.resolve(cargo.payload);
   }
 }
 
+function hasBeenStamped(cargo) {
+  return cargo.stamp;
+}
+
 function deliver(mailman, address, data) {
-  id += 1;
 
-  data.__stamp = id;
+  var cargo = data;
+  if (!hasBeenStamped(cargo)) {
+    id += 1;
+    cargo = {
+      payload: data,
+      stamp: id
+    };
+  }
 
-  mailman(address, data);
+  mailman(address, cargo);
 
   return new Promise(function (resolve, reject) {
     stamp.__deferred[id] = {
