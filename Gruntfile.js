@@ -1,7 +1,7 @@
 /*global module:false*/
 module.exports = function (grunt) {
-  var sourceFiles = ['src/*.js', '!src/md5.js', 'utils/log-to.js', '!src/*-spec.js'];
-  var testFiles = ['src/*-spec.js'];
+  var sourceFiles = ['src/**/*.js', '!src/lib/md5.js', 'utils/log-to.js', '!src/**/*-spec.js'];
+  var testFiles = ['src/**/*-spec.js'];
   var testPages = ['index.html', 'test/page.html'];
 
   var globalName = 'iframeApi';

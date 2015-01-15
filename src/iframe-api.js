@@ -4,8 +4,8 @@ function isIframed() {
   return parent !== window;
 }
 
-var apiMethods = require('./api-methods');
-var la = require('./la');
+var apiMethods = require('./lib/api-methods');
+var la = require('./lib/la');
 
 var iframeApi = function iframeApi(myApi, userOptions) {
   var params = {
