@@ -1,11 +1,11 @@
 var verifyMd5 = require('./verify-md5');
 var la = require('./la');
+var stamp = require('./post-stamp');
 
 function post(port, msg) {
   port.postMessage(msg, '*');
 }
 
-/* global iframeApi */
 /* eslint no-new:0 */
 function apiFactory(port, methodNames, values, methodHelps) {
   values = values || {};
@@ -15,24 +15,7 @@ function apiFactory(port, methodNames, values, methodHelps) {
     throw new Error('Invalid port - does not have postMessage');
   }
 
-  var id = 0;
-  iframeApi.__deferred = [];
-
-  function stamp(address, data) {
-    id += 1;
-
-    data.__stamp = id;
-
-    post(address, data);
-
-    return new Promise(function (resolve, reject) {
-      iframeApi.__deferred[id] = {
-        resolve: resolve.bind(this),
-        reject: reject.bind(this)
-      };
-    });
-  }
-  var stampIt = stamp.bind(null, port);
+  var stampIt = stamp.bind(null, post, port);
 
   function send(cmd) {
     return stampIt({

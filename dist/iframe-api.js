@@ -1058,6 +1058,7 @@ function isIframed() {
 
 var apiMethods = require('./lib/api-methods');
 var la = require('./lib/la');
+var stamp = require('./lib/post-stamp');
 
 var iframeApi = function iframeApi(myApi, userOptions) {
   var params = {
@@ -1124,14 +1125,7 @@ var iframeApi = function iframeApi(myApi, userOptions) {
         }
         case '__method_response': {
           log('received response', e.data.result, 'to command', e.data.__stamp);
-          var defer = iframeApi.__deferred[e.data.__stamp];
-          if (defer) {
-            la(typeof defer.resolve === 'function', 'missing resolve method for', e.data.__stamp);
-            delete e.data.__stamp;
-            defer.resolve(e.data.result);
-            delete iframeApi.__deferred[e.data.__stamp];
-          }
-          return;
+          return stamp(e.data);
         }
         default: {
           return callApiMethod(e.data, e.source);
@@ -1158,15 +1152,15 @@ var iframeApi = function iframeApi(myApi, userOptions) {
 
 module.exports = iframeApi;
 
-},{"./lib/api-methods":4,"./lib/la":5,"es6-promise":1}],4:[function(require,module,exports){
+},{"./lib/api-methods":4,"./lib/la":5,"./lib/post-stamp":8,"es6-promise":1}],4:[function(require,module,exports){
 var verifyMd5 = require('./verify-md5');
 var la = require('./la');
+var stamp = require('./post-stamp');
 
 function post(port, msg) {
   port.postMessage(msg, '*');
 }
 
-/* global iframeApi */
 /* eslint no-new:0 */
 function apiFactory(port, methodNames, values, methodHelps) {
   values = values || {};
@@ -1176,24 +1170,7 @@ function apiFactory(port, methodNames, values, methodHelps) {
     throw new Error('Invalid port - does not have postMessage');
   }
 
-  var id = 0;
-  iframeApi.__deferred = [];
-
-  function stamp(address, data) {
-    id += 1;
-
-    data.__stamp = id;
-
-    post(address, data);
-
-    return new Promise(function (resolve, reject) {
-      iframeApi.__deferred[id] = {
-        resolve: resolve.bind(this),
-        reject: reject.bind(this)
-      };
-    });
-  }
-  var stampIt = stamp.bind(null, port);
+  var stampIt = stamp.bind(null, post, port);
 
   function send(cmd) {
     return stampIt({
@@ -1301,7 +1278,7 @@ module.exports = {
   respond: respond
 };
 
-},{"./la":5,"./md5":6,"./minify":7,"./verify-md5":9}],5:[function(require,module,exports){
+},{"./la":5,"./md5":6,"./minify":7,"./post-stamp":8,"./verify-md5":10}],5:[function(require,module,exports){
 var toArray = require('./to-array');
 
 function la(condition) {
@@ -1315,7 +1292,7 @@ function la(condition) {
 
 module.exports = la;
 
-},{"./to-array":8}],6:[function(require,module,exports){
+},{"./to-array":9}],6:[function(require,module,exports){
 // utility - MD5 computation from
 var md5 = (function md5init() {
 
@@ -1524,12 +1501,56 @@ function removeWhiteSpace(src) {
 module.exports = removeWhiteSpace;
 
 },{"./la":5}],8:[function(require,module,exports){
+/* eslint no-use-before-define:0 */
+var la = require('./la');
+
+function peel(data) {
+  var defer = stamp.__deferred[data.__stamp];
+  if (defer) {
+    la(typeof defer.resolve === 'function', 'missing resolve method for', data.__stamp);
+    delete data.__stamp;
+    defer.resolve(data.result);
+    delete stamp.__deferred[data.__stamp];
+  }
+}
+
+function deliver(mailman, address, data) {
+  id += 1;
+
+  data.__stamp = id;
+
+  mailman(address, data);
+
+  return new Promise(function (resolve, reject) {
+    stamp.__deferred[id] = {
+      resolve: resolve.bind(this),
+      reject: reject.bind(this)
+    };
+  });
+}
+
+function stamp(mailman, address, data) {
+  if (typeof mailman === 'function') {
+    return deliver(mailman, address, data);
+  } else {
+    la(arguments.length === 1 &&
+      typeof mailman === 'object', 'expected just data', arguments);
+    peel(mailman);
+  }
+}
+
+var id = 0;
+stamp.__deferred = [];
+
+module.exports = stamp;
+
+},{"./la":5}],9:[function(require,module,exports){
 function toArray(list) {
   return Array.prototype.slice.call(list, 0);
 }
 module.exports = toArray;
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 var la = require('./la');
 var md5 = require('./md5');
 
