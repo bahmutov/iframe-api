@@ -1502,15 +1502,16 @@ module.exports = removeWhiteSpace;
 
 },{"./la":5}],8:[function(require,module,exports){
 /* eslint no-use-before-define:0 */
-var la = require('./la');
-
 function peel(data) {
   var defer = stamp.__deferred[data.__stamp];
   if (defer) {
-    la(typeof defer.resolve === 'function', 'missing resolve method for', data.__stamp);
+    if (typeof defer.resolve !== 'function') {
+      throw new Error('missing resolve method for ' + data.__stamp);
+    }
     delete data.__stamp;
-    defer.resolve(data.result);
     delete stamp.__deferred[data.__stamp];
+    // TODO handle errors by calling defer.reject
+    defer.resolve(data.result);
   }
 }
 
@@ -1533,8 +1534,10 @@ function stamp(mailman, address, data) {
   if (typeof mailman === 'function') {
     return deliver(mailman, address, data);
   } else {
-    la(arguments.length === 1 &&
-      typeof mailman === 'object', 'expected just data', arguments);
+    if (arguments.length !== 1 ||
+      typeof mailman !== 'object') {
+      throw new Error('expected just data ' + JSON.stringify(arguments));
+    }
     peel(mailman);
   }
 }
@@ -1544,7 +1547,7 @@ stamp.__deferred = [];
 
 module.exports = stamp;
 
-},{"./la":5}],9:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 function toArray(list) {
   return Array.prototype.slice.call(list, 0);
 }
