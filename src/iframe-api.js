@@ -7,6 +7,7 @@ function isIframed() {
 var apiMethods = require('./lib/api-methods');
 var la = require('./lib/la');
 var stamp = require('./lib/post-stamp');
+var selfAddressed = require('self-addressed');
 
 var iframeApi = function iframeApi(myApi, userOptions) {
   var params = {
@@ -68,6 +69,15 @@ var iframeApi = function iframeApi(myApi, userOptions) {
         log(msg);
         throw new Error(msg);
       }
+
+      if (selfAddressed.is(e.data)) {
+        log('received envelope from the other side', e.data);
+        var letter = selfAddressed(e.data);
+        if (!letter) {
+          log('nothing to do for envelope', e.data);
+        }
+      }
+
       switch (data.cmd) {
         case '__handshake': {
           return handshake(data, e.source);
@@ -90,15 +100,15 @@ var iframeApi = function iframeApi(myApi, userOptions) {
     window.addEventListener('message', processMessage);
 
     if (isIframed() && params.myApi) {
-      apiMethods.handshake(parent, params.options);
-      apiMethods.send(params.myApi, parent, params.options);
+      apiMethods.handshake(parent, params.options)
+        .then(function (optionsFromOtherSide) {
+          var api = typeof params.myApi === 'function' ? params.myApi(optionsFromOtherSide) : params.myApi;
+          apiMethods.send(api, parent, params.options);
+        });
+      // apiMethods.send(params.myApi, parent, params.options);
       /*
         TODO switch to promise-returning handshake
         apiMethods.handshake(parent, params.options)
-          .then(function (optionsFromOtherSide) {
-            var api = typeof params.myApi === 'function' ? params.myApi(optionsFromOtherSide) : params.myApi;
-            apiMethods.send(params.myApi, parent, params.options);
-          });
       */
     }
   });

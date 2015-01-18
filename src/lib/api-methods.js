@@ -1,6 +1,7 @@
 var verifyMd5 = require('./verify-md5');
 var la = require('./la');
-var stamp = require('./post-stamp');
+// var stamp = require('./post-stamp');
+var selfAddressed = require('self-addressed');
 
 function post(port, msg) {
   port.postMessage(msg, '*');
@@ -15,10 +16,10 @@ function apiFactory(port, methodNames, values, methodHelps) {
     throw new Error('Invalid port - does not have postMessage');
   }
 
-  var stampIt = stamp.bind(null, post, port);
+  // var sendTo = stamp.bind(null, post, port);
 
   function send(cmd) {
-    return stampIt({
+    return post({
       cmd: cmd,
       args: Array.prototype.slice.call(arguments, 1)
     });
@@ -85,18 +86,23 @@ function respond(port, commandData, result) {
 
   console.log('responding to command', commandData.stamp, 'with', result);
 
-  var stampIt = stamp.bind(null, post, port);
+  // var stampIt = post.bind(null, post, port);
 
   commandData.payload = {
     cmd: '__method_response',
     args: [result]
   };
 
-  stampIt(commandData);
+  post(commandData);
 }
 
 function handshake(port, options) {
+  /*
   post(port, {
+    cmd: '__handshake',
+    options: options
+  });*/
+  return selfAddressed(post, port, {
     cmd: '__handshake',
     options: options
   });

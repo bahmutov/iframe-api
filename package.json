@@ -28,7 +28,8 @@
     "jshint-summary": "0.4.0",
     "matchdep": "0.3.0",
     "mocha": "2.1.0",
-    "pre-git": "0.1.1"
+    "pre-git": "0.1.1",
+    "self-addressed": "0.2.1"
   },
   "engines": {
     "node": "> 0.10.*"
