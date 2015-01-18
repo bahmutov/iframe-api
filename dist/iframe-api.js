@@ -1171,6 +1171,8 @@ var iframeApi = function iframeApi(myApi, userOptions) {
     myApi: myApi,
     options: userOptions || {}
   };
+  params.options.isIframed = isIframed();
+
   var log = params.options.debug || params.options.verbose ?
     console.log.bind(console) : function noop() {};
 
@@ -1179,7 +1181,7 @@ var iframeApi = function iframeApi(myApi, userOptions) {
     function handshake(callerOptions, port) {
       console.log('handshake with caller', JSON.stringify(callerOptions));
       if (!isIframed()) {
-        log('responding to handshake');
+        log('responding to handshake from iframe');
         apiMethods.handshake(port, params.options);
       }
     }
