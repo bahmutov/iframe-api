@@ -59,6 +59,7 @@ module.exports = function (grunt) {
         'dist/*.js',
         'index.html',
         'bower_components/es5-shim/es5-shim.js',
+        'node_modules/console-log-div/console-log-div.js',
         'test/page.html',
         'test/*.js',
         'utils/log-to.js'
