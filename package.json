@@ -11,6 +11,7 @@
     "es6-promise": "2.0.1"
   },
   "devDependencies": {
+    "console-log-div": "0.0.5",
     "eslint-rules": "0.2.0",
     "grunt": "0.4.5",
     "grunt-browserify": "3.2.1",
