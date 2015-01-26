@@ -1134,7 +1134,7 @@ function isIframed() {
 
 var apiMethods = require('./lib/api-methods');
 var la = require('./lib/la');
-var stamp = require('./lib/post-stamp');
+// var stamp = require('./lib/post-stamp');
 var selfAddressed = require('self-addressed');
 
 var iframeApi = function iframeApi(myApi, userOptions) {
@@ -1149,11 +1149,32 @@ var iframeApi = function iframeApi(myApi, userOptions) {
 
   return new Promise(function (resolve, reject) {
 
+    /*
     function handshake(callerOptions, port) {
       console.log('handshake with caller', JSON.stringify(callerOptions));
       if (!isIframed()) {
         log('responding to handshake from iframe');
+        var letter = selfAddressed(callerOptions);
+        if (letter) {
+          console.log('iframe hadnshake options', JSON.stringify(letter));
+        }
         apiMethods.handshake(port, params.options);
+      }
+    }*/
+
+    function handshakeEnvelope(envelope, port) {
+      console.log('handshake envelope with caller', JSON.stringify(envelope));
+
+      if (!isIframed()) {
+        log('responding to handshake from iframe');
+        var letter = selfAddressed(envelope);
+        if (letter) {
+          console.log('iframe hadnshake options', JSON.stringify(letter));
+        }
+        selfAddressed(envelope, params.options);
+        selfAddressed(apiMethods.post, port, envelope);
+        // selfAddressed()
+        // apiMethods.handshake(port, params.options);
       }
     }
 
@@ -1192,6 +1213,22 @@ var iframeApi = function iframeApi(myApi, userOptions) {
 
     function processMessage(e) {
       la(e.data, 'expected message with data');
+      if (selfAddressed.is(e.data)) {
+        log('received envelope from the other side', e.data);
+        var letter = selfAddressed(e.data);
+        if (!letter) {
+          log('nothing to do for envelope', e.data);
+        } else {
+          switch (letter.cmd) {
+            case '__handshake': {
+              return handshakeEnvelope(e.data, e.source);
+            }
+
+          }
+        }
+        return;
+      }
+
       var data = e.data.payload ? e.data.payload : e.data;
 
       if (!data || !data.cmd) {
@@ -1200,26 +1237,21 @@ var iframeApi = function iframeApi(myApi, userOptions) {
         throw new Error(msg);
       }
 
-      if (selfAddressed.is(e.data)) {
-        log('received envelope from the other side', e.data);
-        var letter = selfAddressed(e.data);
-        if (!letter) {
-          log('nothing to do for envelope', e.data);
-        }
-      }
 
       switch (data.cmd) {
+        /*
         case '__handshake': {
           return handshake(data, e.source);
-        }
+        }*/
         case '__api': {
           return receiveApi(data, e.source);
         }
+        /*
         case '__method_response': {
           la(e.data.stamp, 'missing return stamp', e.data);
           log('received response', data.args[0], 'to command', e.data.stamp);
           return stamp(e.data);
-        }
+        }*/
         default: {
           var result = callApiMethod(data, e);
           apiMethods.respond(e.source, e.data, result);
@@ -1233,6 +1265,7 @@ var iframeApi = function iframeApi(myApi, userOptions) {
       apiMethods.handshake(parent, params.options)
         .then(function (optionsFromOtherSide) {
           var api = typeof params.myApi === 'function' ? params.myApi(optionsFromOtherSide) : params.myApi;
+          console.log('has received handshake options', JSON.stringify(optionsFromOtherSide));
           apiMethods.send(api, parent, params.options);
         });
       // apiMethods.send(params.myApi, parent, params.options);
@@ -1246,7 +1279,7 @@ var iframeApi = function iframeApi(myApi, userOptions) {
 
 module.exports = iframeApi;
 
-},{"./lib/api-methods":5,"./lib/la":6,"./lib/post-stamp":9,"es6-promise":1,"self-addressed":3}],5:[function(require,module,exports){
+},{"./lib/api-methods":5,"./lib/la":6,"es6-promise":1,"self-addressed":3}],5:[function(require,module,exports){
 var verifyMd5 = require('./verify-md5');
 var la = require('./la');
 // var stamp = require('./post-stamp');
@@ -1268,7 +1301,7 @@ function apiFactory(port, methodNames, values, methodHelps) {
   // var sendTo = stamp.bind(null, post, port);
 
   function send(cmd) {
-    return post({
+    return post(port, {
       cmd: cmd,
       args: Array.prototype.slice.call(arguments, 1)
     });
@@ -1379,10 +1412,11 @@ module.exports = {
   apiFactory: apiFactory,
   send: sendApi,
   reviveApi: reviveApi,
+  post: post,
   respond: respond
 };
 
-},{"./la":6,"./md5":7,"./minify":8,"./verify-md5":11,"self-addressed":3}],6:[function(require,module,exports){
+},{"./la":6,"./md5":7,"./minify":8,"./verify-md5":10,"self-addressed":3}],6:[function(require,module,exports){
 var toArray = require('./to-array');
 
 function la(condition) {
@@ -1396,7 +1430,7 @@ function la(condition) {
 
 module.exports = la;
 
-},{"./to-array":10}],7:[function(require,module,exports){
+},{"./to-array":9}],7:[function(require,module,exports){
 // utility - MD5 computation from
 var md5 = (function md5init() {
 
@@ -1605,73 +1639,12 @@ function removeWhiteSpace(src) {
 module.exports = removeWhiteSpace;
 
 },{"./la":6}],9:[function(require,module,exports){
-/* eslint no-use-before-define:0 */
-function peel(cargo) {
-  var defer = stamp.__deferred[cargo.stamp];
-  if (defer) {
-    if (typeof defer.resolve !== 'function') {
-      throw new Error('missing resolve method for ' + cargo.stamp);
-    }
-    delete cargo.stamp;
-    delete stamp.__deferred[cargo.stamp];
-    // TODO handle errors by calling defer.reject
-    if (!cargo.payload) {
-      throw new Error('missing payload in', cargo);
-    }
-    var result = Array.isArray(cargo.payload.args) && cargo.payload.args[0];
-    defer.resolve(result);
-  }
-}
-
-function hasBeenStamped(cargo) {
-  return cargo.stamp;
-}
-
-function deliver(mailman, address, data) {
-
-  var cargo = data;
-  if (!hasBeenStamped(cargo)) {
-    id += 1;
-    cargo = {
-      payload: data,
-      stamp: id
-    };
-  }
-
-  mailman(address, cargo);
-
-  return new Promise(function (resolve, reject) {
-    stamp.__deferred[id] = {
-      resolve: resolve.bind(this),
-      reject: reject.bind(this)
-    };
-  });
-}
-
-function stamp(mailman, address, data) {
-  if (typeof mailman === 'function') {
-    return deliver(mailman, address, data);
-  } else {
-    if (arguments.length !== 1 ||
-      typeof mailman !== 'object') {
-      throw new Error('expected just data ' + JSON.stringify(arguments));
-    }
-    peel(mailman);
-  }
-}
-
-var id = 0;
-stamp.__deferred = [];
-
-module.exports = stamp;
-
-},{}],10:[function(require,module,exports){
 function toArray(list) {
   return Array.prototype.slice.call(list, 0);
 }
 module.exports = toArray;
 
-},{}],11:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 var la = require('./la');
 var md5 = require('./md5');
 

@@ -19,7 +19,7 @@ function apiFactory(port, methodNames, values, methodHelps) {
   // var sendTo = stamp.bind(null, post, port);
 
   function send(cmd) {
-    return post({
+    return post(port, {
       cmd: cmd,
       args: Array.prototype.slice.call(arguments, 1)
     });
@@ -130,5 +130,6 @@ module.exports = {
   apiFactory: apiFactory,
   send: sendApi,
   reviveApi: reviveApi,
+  post: post,
   respond: respond
 };
