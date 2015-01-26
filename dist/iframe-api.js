@@ -1134,7 +1134,6 @@ function isIframed() {
 
 var apiMethods = require('./lib/api-methods');
 var la = require('./lib/la');
-// var stamp = require('./lib/post-stamp');
 var selfAddressed = require('self-addressed');
 
 var iframeApi = function iframeApi(myApi, userOptions) {
@@ -1147,20 +1146,27 @@ var iframeApi = function iframeApi(myApi, userOptions) {
   var log = params.options.debug || params.options.verbose ?
     console.log.bind(console) : function noop() {};
 
-  return new Promise(function (resolve, reject) {
+  function callApiMethod(data) {
+    var cmd = data.cmd;
+    var args = data.args;
+    la(typeof cmd === 'string', 'missing command string', cmd);
+    if (!Array.isArray(args)) {
+      args = [];
+    }
 
-    /*
-    function handshake(callerOptions, port) {
-      console.log('handshake with caller', JSON.stringify(callerOptions));
-      if (!isIframed()) {
-        log('responding to handshake from iframe');
-        var letter = selfAddressed(callerOptions);
-        if (letter) {
-          console.log('iframe hadnshake options', JSON.stringify(letter));
-        }
-        apiMethods.handshake(port, params.options);
+    if (params.myApi) {
+      var method = params.myApi[cmd];
+      if (typeof method === 'function') {
+        var result = method.apply(params.myApi, args);
+        log('method', cmd, 'result', JSON.stringify(result));
+        return result;
+      } else {
+        log('unknown command', cmd, 'from the parent');
       }
-    }*/
+    }
+  }
+
+  return new Promise(function (resolve, reject) {
 
     function handshakeEnvelope(envelope, port) {
       console.log('handshake envelope with caller', JSON.stringify(envelope));
@@ -1173,9 +1179,15 @@ var iframeApi = function iframeApi(myApi, userOptions) {
         }
         selfAddressed(envelope, params.options);
         selfAddressed(apiMethods.post, port, envelope);
-        // selfAddressed()
-        // apiMethods.handshake(port, params.options);
       }
+    }
+
+    function respondToMail(envelope, port) {
+      var letter = selfAddressed(envelope);
+      console.log('responding to letter', JSON.stringify(letter));
+      var result = callApiMethod(letter);
+      selfAddressed(envelope, result);
+      selfAddressed(apiMethods.post, port, envelope);
     }
 
     function receiveApi(received, port) {
@@ -1191,26 +1203,6 @@ var iframeApi = function iframeApi(myApi, userOptions) {
       }
     }
 
-    function callApiMethod(data) {
-      var cmd = data.cmd;
-      var args = data.args;
-      la(typeof cmd === 'string', 'missing command string', cmd);
-      if (!Array.isArray(args)) {
-        args = [];
-      }
-
-      if (params.myApi) {
-        var method = params.myApi[cmd];
-        if (typeof method === 'function') {
-          var result = method.apply(params.myApi, args);
-          log('method', cmd, 'result', JSON.stringify(result));
-          return result;
-        } else {
-          log('unknown command', cmd, 'from the parent');
-        }
-      }
-    }
-
     function processMessage(e) {
       la(e.data, 'expected message with data');
       if (selfAddressed.is(e.data)) {
@@ -1223,7 +1215,9 @@ var iframeApi = function iframeApi(myApi, userOptions) {
             case '__handshake': {
               return handshakeEnvelope(e.data, e.source);
             }
-
+            default: {
+              return respondToMail(e.data, e.source);
+            }
           }
         }
         return;
@@ -1237,24 +1231,9 @@ var iframeApi = function iframeApi(myApi, userOptions) {
         throw new Error(msg);
       }
 
-
       switch (data.cmd) {
-        /*
-        case '__handshake': {
-          return handshake(data, e.source);
-        }*/
         case '__api': {
           return receiveApi(data, e.source);
-        }
-        /*
-        case '__method_response': {
-          la(e.data.stamp, 'missing return stamp', e.data);
-          log('received response', data.args[0], 'to command', e.data.stamp);
-          return stamp(e.data);
-        }*/
-        default: {
-          var result = callApiMethod(data, e);
-          apiMethods.respond(e.source, e.data, result);
         }
       }
 
@@ -1268,11 +1247,6 @@ var iframeApi = function iframeApi(myApi, userOptions) {
           console.log('has received handshake options', JSON.stringify(optionsFromOtherSide));
           apiMethods.send(api, parent, params.options);
         });
-      // apiMethods.send(params.myApi, parent, params.options);
-      /*
-        TODO switch to promise-returning handshake
-        apiMethods.handshake(parent, params.options)
-      */
     }
   });
 };
@@ -1282,7 +1256,6 @@ module.exports = iframeApi;
 },{"./lib/api-methods":5,"./lib/la":6,"es6-promise":1,"self-addressed":3}],5:[function(require,module,exports){
 var verifyMd5 = require('./verify-md5');
 var la = require('./la');
-// var stamp = require('./post-stamp');
 var selfAddressed = require('self-addressed');
 
 function post(port, msg) {
@@ -1298,13 +1271,17 @@ function apiFactory(port, methodNames, values, methodHelps) {
     throw new Error('Invalid port - does not have postMessage');
   }
 
-  // var sendTo = stamp.bind(null, post, port);
-
   function send(cmd) {
-    return post(port, {
+    return selfAddressed(post, port, {
       cmd: cmd,
       args: Array.prototype.slice.call(arguments, 1)
     });
+
+    /*
+    return post(port, {
+      cmd: cmd,
+      args: Array.prototype.slice.call(arguments, 1)
+    });*/
   }
 
   var api = {};
@@ -1379,11 +1356,6 @@ function respond(port, commandData, result) {
 }
 
 function handshake(port, options) {
-  /*
-  post(port, {
-    cmd: '__handshake',
-    options: options
-  });*/
   return selfAddressed(post, port, {
     cmd: '__handshake',
     options: options
