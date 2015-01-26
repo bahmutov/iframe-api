@@ -19,5 +19,13 @@
     "package.json",
     "images"
   ],
-  "main": "dist/iframe-api.js"
+  "main": "dist/iframe-api.js",
+  "keywords": [
+    "iframe",
+    "frame",
+    "website",
+    "api",
+    "communication",
+    "html"
+  ]
 }
