@@ -1023,21 +1023,39 @@ process.umask = function() { return 0; };
 },{}],3:[function(require,module,exports){
 require('es6-promise').polyfill();
 
+var log;
+
+function toString(x) {
+  return typeof x === 'string' ? x : JSON.stringify(x);
+}
+
+function toStrings() {
+  return Array.prototype.splice.call(arguments, 0).map(toString);
+}
+
+function initLog(options) {
+  options = options || {};
+  log = options.debug || options.verbose ?
+    function () {
+      console.log.apply(console, toStrings.apply(null, arguments));
+    } : function noop() {};
+}
+
 /* eslint no-use-before-define:0 */
 function open(envelope) {
-  console.log('opening envelope', envelope);
+  log('opening envelope', envelope);
 
   if (envelope.replies) {
-    console.log('this envelope is a reply', envelope.replies);
-    console.log(stamp.__deferred);
+    log('this envelope is a reply', envelope.replies);
+    log(stamp.__deferred);
     var defer = stamp.__deferred[envelope.stamp];
     if (defer) {
-      console.log('received response', envelope);
+      log('received response', envelope);
       var letter = envelope.payload;
       if (typeof defer.resolve !== 'function') {
         throw new Error('missing resolve method for ' + envelope.stamp);
       }
-      console.log('resolving with payload', letter, 'for stamp', envelope.stamp);
+      log('resolving with payload', letter, 'for stamp', envelope.stamp);
       delete envelope.stamp;
       delete stamp.__deferred[envelope.stamp];
 
@@ -1047,12 +1065,11 @@ function open(envelope) {
       // }
 
       defer.resolve(letter);
-      console.log('after resolve');
       return;
     }
   }
 
-  console.log('returning payload from envelope', envelope);
+  log('returning payload from envelope', envelope);
   return envelope.payload;
 }
 
@@ -1090,18 +1107,18 @@ function deliver(mailman, address, data) {
 }
 
 function stamp(mailman, address, data) {
-  // console.log(arguments);
+  initLog(stamp.options);
 
   if (typeof mailman === 'function') {
     return deliver(mailman, address, data);
   } else if (arguments.length === 2 && hasBeenStamped(mailman)) {
     var envelope = mailman;
-    console.log('resealing envelope', envelope);
+    log('resealing envelope', envelope);
     data = address;
     envelope.payload = data;
     return envelope;
   } else if (arguments.length === 1 && hasBeenStamped(mailman)) {
-    console.log('opening envelope?', mailman);
+    log('opening envelope?', mailman);
     if (arguments.length !== 1 ||
       typeof mailman !== 'object') {
       throw new Error('expected just data ' + JSON.stringify(arguments));
@@ -1122,6 +1139,9 @@ stamp.is = function is(data) {
 
 var id = 0;
 stamp.__deferred = {};
+stamp.options = {
+  verbose: false
+};
 
 module.exports = stamp;
 

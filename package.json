@@ -1,7 +1,7 @@
 {
   "name": "iframe-api",
   "description": "Bidirectional API communication between external and iframed websites",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "author": "Gleb Bahmutov <gleb.bahmutov@gmail.com>",
   "bugs": {
     "url": "https://github.com/bahmutov/iframe-api/issues"
@@ -30,7 +30,7 @@
     "matchdep": "0.3.0",
     "mocha": "2.1.0",
     "pre-git": "0.1.1",
-    "self-addressed": "0.2.1"
+    "self-addressed": "0.3.0"
   },
   "engines": {
     "node": "> 0.10.*"
