@@ -13,7 +13,7 @@
 
     <button id="btn" style="display:none">Call iframe API method</button>
 
-    <script src="utils/log-to.js"></script>
+    <script src="node_modules/console-log-div/console-log-div.js"></script>
 
     <script src="dist/iframe-api.js"></script>
 
@@ -58,11 +58,19 @@
         btn.style.display = '';
 
         // try calling a method
+        var receivedBarResponse;
         api.bar().then(function (result) {
           if (result !== 'bar') {
             throw new Error('invalid result from .bar() ' + result);
           }
+          receivedBarResponse = true;
         });
+
+        setTimeout(function checkBarResponse() {
+          if (!receivedBarResponse) {
+            throw new Error('Missing bar response');
+          }
+        }, 50);
       }
 
       function error(err) {

@@ -965,69 +965,39 @@
 // shim for using process in browser
 
 var process = module.exports = {};
+var queue = [];
+var draining = false;
 
-process.nextTick = (function () {
-    var canSetImmediate = typeof window !== 'undefined'
-    && window.setImmediate;
-    var canMutationObserver = typeof window !== 'undefined'
-    && window.MutationObserver;
-    var canPost = typeof window !== 'undefined'
-    && window.postMessage && window.addEventListener
-    ;
-
-    if (canSetImmediate) {
-        return function (f) { return window.setImmediate(f) };
+function drainQueue() {
+    if (draining) {
+        return;
     }
-
-    var queue = [];
-
-    if (canMutationObserver) {
-        var hiddenDiv = document.createElement("div");
-        var observer = new MutationObserver(function () {
-            var queueList = queue.slice();
-            queue.length = 0;
-            queueList.forEach(function (fn) {
-                fn();
-            });
-        });
-
-        observer.observe(hiddenDiv, { attributes: true });
-
-        return function nextTick(fn) {
-            if (!queue.length) {
-                hiddenDiv.setAttribute('yes', 'no');
-            }
-            queue.push(fn);
-        };
+    draining = true;
+    var currentQueue;
+    var len = queue.length;
+    while(len) {
+        currentQueue = queue;
+        queue = [];
+        var i = -1;
+        while (++i < len) {
+            currentQueue[i]();
+        }
+        len = queue.length;
     }
-
-    if (canPost) {
-        window.addEventListener('message', function (ev) {
-            var source = ev.source;
-            if ((source === window || source === null) && ev.data === 'process-tick') {
-                ev.stopPropagation();
-                if (queue.length > 0) {
-                    var fn = queue.shift();
-                    fn();
-                }
-            }
-        }, true);
-
-        return function nextTick(fn) {
-            queue.push(fn);
-            window.postMessage('process-tick', '*');
-        };
+    draining = false;
+}
+process.nextTick = function (fun) {
+    queue.push(fun);
+    if (!draining) {
+        setTimeout(drainQueue, 0);
     }
-
-    return function nextTick(fn) {
-        setTimeout(fn, 0);
-    };
-})();
+};
 
 process.title = 'browser';
 process.browser = true;
 process.env = {};
 process.argv = [];
+process.version = ''; // empty string to avoid regexp issues
 
 function noop() {}
 
@@ -1048,12 +1018,280 @@ process.cwd = function () { return '/' };
 process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
+process.umask = function() { return 0; };
 
 },{}],3:[function(require,module,exports){
+require('es6-promise').polyfill();
+
+var log;
+
+function toString(x) {
+  return typeof x === 'string' ? x : JSON.stringify(x);
+}
+
+function toStrings() {
+  return Array.prototype.splice.call(arguments, 0).map(toString);
+}
+
+function initLog(options) {
+  options = options || {};
+  log = options.debug || options.verbose ?
+    function () {
+      console.log.apply(console, toStrings.apply(null, arguments));
+    } : function noop() {};
+}
+
+/* eslint no-use-before-define:0 */
+function open(envelope) {
+  log('opening envelope', envelope);
+
+  if (envelope.replies) {
+    log('this envelope is a reply', envelope.replies);
+    log(stamp.__deferred);
+    var defer = stamp.__deferred[envelope.stamp];
+    if (defer) {
+      log('received response', envelope);
+      var letter = envelope.payload;
+      if (typeof defer.resolve !== 'function') {
+        throw new Error('missing resolve method for ' + envelope.stamp);
+      }
+      log('resolving with payload', letter, 'for stamp', envelope.stamp);
+      delete envelope.stamp;
+      delete stamp.__deferred[envelope.stamp];
+
+      // TODO handle errors by calling defer.reject
+      // if (!letter) {
+      // throw new Error('missing payload in', envelope);
+      // }
+
+      defer.resolve(letter);
+      return;
+    }
+  }
+
+  log('returning payload from envelope', envelope);
+  return envelope.payload;
+}
+
+function hasBeenStamped(cargo) {
+  return cargo && cargo.stamp;
+}
+
+function deliver(mailman, address, data) {
+
+  var cargo = data;
+  if (!hasBeenStamped(cargo)) {
+    id += 1;
+    cargo = {
+      payload: data,
+      stamp: String(id),
+      replies: 0
+    };
+  } else {
+    if (typeof cargo.replies !== 'number') {
+      throw new Error('Cannot find replies property ' + JSON.stringify(cargo));
+    }
+    cargo.replies += 1;
+  }
+
+  setTimeout(function () {
+    mailman(address, cargo);
+  }, 0);
+
+  return new Promise(function (resolve, reject) {
+    stamp.__deferred[cargo.stamp] = {
+      resolve: resolve.bind(this),
+      reject: reject.bind(this)
+    };
+  });
+}
+
+function stamp(mailman, address, data) {
+  initLog(stamp.options);
+
+  if (typeof mailman === 'function') {
+    return deliver(mailman, address, data);
+  } else if (arguments.length === 2 && hasBeenStamped(mailman)) {
+    var envelope = mailman;
+    log('resealing envelope', envelope);
+    data = address;
+    envelope.payload = data;
+    return envelope;
+  } else if (arguments.length === 1 && hasBeenStamped(mailman)) {
+    log('opening envelope?', mailman);
+    if (arguments.length !== 1 ||
+      typeof mailman !== 'object') {
+      throw new Error('expected just data ' + JSON.stringify(arguments));
+    }
+    return open(mailman);
+  }
+
+  // do not have an envelope or stamp
+  if (data && data.payload) {
+    return data.payload;
+  }
+  return data;
+}
+
+stamp.is = function is(data) {
+  return hasBeenStamped(data);
+};
+
+var id = 0;
+stamp.__deferred = {};
+stamp.options = {
+  verbose: false
+};
+
+module.exports = stamp;
+
+},{"es6-promise":1}],4:[function(require,module,exports){
+require('es6-promise').polyfill();
+
+function isIframed() {
+  return parent !== window;
+}
+
+var apiMethods = require('./lib/api-methods');
+var la = require('./lib/la');
+var selfAddressed = require('self-addressed');
+
+function toString(x) {
+  return typeof x === 'string' ? x : JSON.stringify(x);
+}
+
+function toStrings() {
+  return Array.prototype.splice.call(arguments, 0).map(toString);
+}
+
+var iframeApi = function iframeApi(myApi, userOptions) {
+  var params = {
+    myApi: myApi,
+    options: userOptions || {}
+  };
+  params.options.isIframed = isIframed();
+
+  var log = params.options.debug || params.options.verbose ?
+    function () {
+      console.log.apply(console, toStrings.apply(null, arguments));
+    } : function noop() {};
+
+  function callApiMethod(data) {
+    var cmd = data.cmd;
+    var args = data.args;
+    la(typeof cmd === 'string', 'missing command string', cmd);
+    if (!Array.isArray(args)) {
+      args = [];
+    }
+
+    if (params.myApi) {
+      var method = params.myApi[cmd];
+      if (typeof method === 'function') {
+        var result = method.apply(params.myApi, args);
+        log('method', cmd, 'result', JSON.stringify(result));
+        return result;
+      } else {
+        log('unknown command', cmd, 'from the parent');
+      }
+    }
+  }
+
+  return new Promise(function (resolve, reject) {
+
+    function handshakeEnvelope(envelope, port) {
+      console.log('handshake envelope with caller', JSON.stringify(envelope));
+
+      if (!isIframed()) {
+        log('responding to handshake from iframe');
+        var letter = selfAddressed(envelope);
+        if (letter) {
+          console.log('iframe hadnshake options', JSON.stringify(letter));
+        }
+        selfAddressed(envelope, params.options);
+        selfAddressed(apiMethods.post, port, envelope);
+      }
+    }
+
+    function respondToMail(envelope, port) {
+      var letter = selfAddressed(envelope);
+      console.log('responding to letter', JSON.stringify(letter));
+      var result = callApiMethod(letter);
+      selfAddressed(envelope, result);
+      selfAddressed(apiMethods.post, port, envelope);
+    }
+
+    function receiveApi(received, port) {
+      try {
+        var api = apiMethods.reviveApi(params.options, received, port);
+        if (!isIframed() && params.myApi) {
+          log('sending external api back to the iframe');
+          apiMethods.send(params.myApi, port, params.options);
+        }
+        resolve(api);
+      } catch (err) {
+        reject(err);
+      }
+    }
+
+    function processMessage(e) {
+      la(e.data, 'expected message with data');
+      if (selfAddressed.is(e.data)) {
+        log('received envelope from the other side', e.data);
+        var letter = selfAddressed(e.data);
+        if (!letter) {
+          log('nothing to do for envelope', e.data);
+        } else {
+          switch (letter.cmd) {
+            case '__handshake': {
+              return handshakeEnvelope(e.data, e.source);
+            }
+            default: {
+              return respondToMail(e.data, e.source);
+            }
+          }
+        }
+        return;
+      }
+
+      var data = e.data.payload ? e.data.payload : e.data;
+
+      if (!data || !data.cmd) {
+        var msg = 'invalid message received by the iframe API';
+        log(msg);
+        throw new Error(msg);
+      }
+
+      switch (data.cmd) {
+        case '__api': {
+          return receiveApi(data, e.source);
+        }
+      }
+
+    }
+    window.addEventListener('message', processMessage);
+
+    if (isIframed() && params.myApi) {
+      apiMethods.handshake(parent, params.options)
+        .then(function (optionsFromOtherSide) {
+          var api = typeof params.myApi === 'function' ? params.myApi(optionsFromOtherSide) : params.myApi;
+          console.log('has received handshake options', JSON.stringify(optionsFromOtherSide));
+          apiMethods.send(api, parent, params.options);
+        });
+    }
+  });
+};
+
+module.exports = iframeApi;
+
+},{"./lib/api-methods":5,"./lib/la":6,"es6-promise":1,"self-addressed":3}],5:[function(require,module,exports){
 var verifyMd5 = require('./verify-md5');
 var la = require('./la');
+var selfAddressed = require('self-addressed');
 
-/* global iframeApi */
+function post(port, msg) {
+  port.postMessage(msg, '*');
+}
+
 /* eslint no-new:0 */
 function apiFactory(port, methodNames, values, methodHelps) {
   values = values || {};
@@ -1063,22 +1301,17 @@ function apiFactory(port, methodNames, values, methodHelps) {
     throw new Error('Invalid port - does not have postMessage');
   }
 
-  var id = 0;
-  iframeApi.__deferred = [];
-
   function send(cmd) {
-    id += 1;
-    port.postMessage({
+    return selfAddressed(post, port, {
       cmd: cmd,
-      args: Array.prototype.slice.call(arguments, 1),
-      id: id
-    }, '*');
-    return new Promise(function (resolve, reject) {
-      iframeApi.__deferred[id] = {
-        resolve: resolve.bind(this),
-        reject: reject.bind(this)
-      };
+      args: Array.prototype.slice.call(arguments, 1)
     });
+
+    /*
+    return post(port, {
+      cmd: cmd,
+      args: Array.prototype.slice.call(arguments, 1)
+    });*/
   }
 
   var api = {};
@@ -1125,27 +1358,38 @@ function sendApi(api, target, options) {
 
   // TODO(gleb): validate that api source can be recreated back
 
-  target.postMessage({
+  post(target, {
     cmd: '__api',
     source: apiSource,
     md5: md5(apiSource),
     methodNames: methodNames,
     methodHelps: methodHelps,
     values: values
-  }, '*');
+  });
 }
 
 // sending result for command back to the caller
 function respond(port, commandData, result) {
-  la(typeof commandData === 'object' && commandData.id,
-    'missing command id', commandData);
+  la(typeof commandData === 'object' && commandData.stamp,
+    'missing command stamp', commandData);
 
-  console.log('responding to command', commandData.id, 'with', result);
-  port.postMessage({
-    cmd: '__response',
-    id: commandData.id,
-    result: result
-  }, '*');
+  console.log('responding to command', commandData.stamp, 'with', result);
+
+  // var stampIt = post.bind(null, post, port);
+
+  commandData.payload = {
+    cmd: '__method_response',
+    args: [result]
+  };
+
+  post(commandData);
+}
+
+function handshake(port, options) {
+  return selfAddressed(post, port, {
+    cmd: '__handshake',
+    options: options
+  });
 }
 
 function reviveApi(userOptions, received, port) {
@@ -1166,97 +1410,15 @@ function reviveApi(userOptions, received, port) {
 }
 
 module.exports = {
+  handshake: handshake,
   apiFactory: apiFactory,
   send: sendApi,
   reviveApi: reviveApi,
+  post: post,
   respond: respond
 };
 
-},{"./la":5,"./md5":6,"./minify":7,"./verify-md5":9}],4:[function(require,module,exports){
-require('es6-promise').polyfill();
-
-function isIframed() {
-  return parent !== window;
-}
-
-var apiMethods = require('./api-methods');
-var la = require('./la');
-
-var iframeApi = function iframeApi(myApi, userOptions) {
-  var params = {
-    myApi: myApi,
-    options: userOptions || {}
-  };
-  var log = params.options.debug || params.options.verbose ?
-    console.log.bind(console) : function noop() {};
-
-  return new Promise(function (resolve, reject) {
-
-    function receiveApi(received, port) {
-      try {
-        var api = apiMethods.reviveApi(params.options, received, port);
-        if (!isIframed() && params.myApi) {
-          log('sending external api back to the iframe');
-          apiMethods.send(params.myApi, port, params.options);
-        }
-        resolve(api);
-      } catch (err) {
-        reject(err);
-      }
-    }
-
-    function callApiMethod(data, port) {
-      var cmd = data.cmd;
-      var args = data.args;
-      la(typeof cmd === 'string', 'missing command string', cmd);
-      if (!Array.isArray(args)) {
-        args = [];
-      }
-
-      if (params.myApi) {
-        var method = params.myApi[cmd];
-        if (typeof method === 'function') {
-          var result = method.apply(params.myApi, args);
-          log('method', cmd, 'result', JSON.stringify(result));
-          apiMethods.respond(port, data, result);
-        } else {
-          log('unknown command', cmd, 'from the parent');
-        }
-      }
-    }
-
-    function processMessage(e) {
-      if (!e.data || !e.data.cmd) {
-        log('invalid message received by the iframe API', e.data);
-        return;
-      }
-      if (e.data.cmd === '__api') {
-        return receiveApi(e.data, e.source);
-      }
-      if (e.data.cmd === '__response') {
-        log('received response', e.data.result, 'to command', e.data.id);
-        var defer = iframeApi.__deferred[e.data.id];
-        if (defer) {
-          la(typeof defer.resolve === 'function', 'missing resolve method for', e.data.id);
-          defer.resolve(e.data.result);
-          delete iframeApi.__deferred[e.data.id];
-        }
-        return;
-      }
-
-      callApiMethod(e.data, e.source);
-    }
-    window.addEventListener('message', processMessage);
-
-    if (isIframed() && params.myApi) {
-      apiMethods.send(params.myApi, parent, params.options);
-    }
-  });
-};
-
-module.exports = iframeApi;
-
-},{"./api-methods":3,"./la":5,"es6-promise":1}],5:[function(require,module,exports){
+},{"./la":6,"./md5":7,"./minify":8,"./verify-md5":10,"self-addressed":3}],6:[function(require,module,exports){
 var toArray = require('./to-array');
 
 function la(condition) {
@@ -1270,7 +1432,7 @@ function la(condition) {
 
 module.exports = la;
 
-},{"./to-array":8}],6:[function(require,module,exports){
+},{"./to-array":9}],7:[function(require,module,exports){
 // utility - MD5 computation from
 var md5 = (function md5init() {
 
@@ -1469,7 +1631,7 @@ if (md5('hello') != '5d41402abc4b2a76b9719d911017c592') {
 
 module.exports = md5;
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 var la = require('./la');
 function removeWhiteSpace(src) {
   la(src, 'missing source', src);
@@ -1478,13 +1640,13 @@ function removeWhiteSpace(src) {
 
 module.exports = removeWhiteSpace;
 
-},{"./la":5}],8:[function(require,module,exports){
+},{"./la":6}],9:[function(require,module,exports){
 function toArray(list) {
   return Array.prototype.slice.call(list, 0);
 }
 module.exports = toArray;
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 var la = require('./la');
 var md5 = require('./md5');
 
@@ -1508,5 +1670,5 @@ function verifyMd5(options, received) {
 
 module.exports = verifyMd5;
 
-},{"./la":5,"./md5":6}]},{},[4])(4)
+},{"./la":6,"./md5":7}]},{},[4])(4)
 });
