@@ -1136,6 +1136,14 @@ var apiMethods = require('./lib/api-methods');
 var la = require('./lib/la');
 var selfAddressed = require('self-addressed');
 
+function toString(x) {
+  return typeof x === 'string' ? x : JSON.stringify(x);
+}
+
+function toStrings() {
+  return Array.prototype.splice.call(arguments, 0).map(toString);
+}
+
 var iframeApi = function iframeApi(myApi, userOptions) {
   var params = {
     myApi: myApi,
@@ -1144,7 +1152,9 @@ var iframeApi = function iframeApi(myApi, userOptions) {
   params.options.isIframed = isIframed();
 
   var log = params.options.debug || params.options.verbose ?
-    console.log.bind(console) : function noop() {};
+    function () {
+      console.log.apply(console, toStrings.apply(null, arguments));
+    } : function noop() {};
 
   function callApiMethod(data) {
     var cmd = data.cmd;
