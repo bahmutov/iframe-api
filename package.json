@@ -55,6 +55,7 @@
     "url": "https://github.com/bahmutov/iframe-api.git"
   },
   "scripts": {
-    "test": "grunt"
+    "test": "grunt",
+    "test-async": "grunt clean-console:async"
   }
 }

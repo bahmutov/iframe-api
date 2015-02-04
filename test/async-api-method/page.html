@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+<head>
+  <meta charset="utf-8">
+  <title>page for iframe api</title>
+  <script src="../../bower_components/es5-shim/es5-shim.js"></script>
+</head>
+<body>
+  <h2>iframed page with async api method</h2>
+  <script src="../../node_modules/console-log-div/console-log-div.js"></script>
+
+  <script src="../../dist/iframe-api.js"></script>
+  <script>
+    (function apiHandshake() {
+      if (typeof iframeApi === 'undefined') {
+        console.log('Cannot find iframeApi function, are we inside an iframe?');
+        return;
+      }
+
+      var api = {
+        echo: function (message) {
+          console.log('iframe: api.echo', message);
+          return new Promise(function (resolve) {
+            setTimeout(function () {
+              resolve(message);
+            }, 50);
+          });
+        }
+      };
+
+      function connected() {
+      }
+
+      function error(err) {
+        throw new Error('Could not init external api ' + err);
+      }
+
+      iframeApi(api).then(connected, error);
+    }());
+  </script>
+</body>
+</html>

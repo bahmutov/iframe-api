@@ -47,6 +47,13 @@ module.exports = function (grunt) {
           url: 'index.html',
           timeout: 1 // seconds to wait for any errors
         }
+      },
+      // test async api method
+      async: {
+        options: {
+          url: 'test/async-api-method/index.html',
+          timeout: 1 // seconds to wait for any errors
+        }
       }
     },
 
@@ -102,6 +109,7 @@ module.exports = function (grunt) {
   plugins.forEach(grunt.loadNpmTasks);
 
   grunt.registerTask('lint', ['filenames', 'jshint', 'eslint', 'jscs']);
-  grunt.registerTask('test', ['mochaTest', 'clean-console']);
+  // do not execute all clean-console tasks until async api method calls are working
+  grunt.registerTask('test', ['mochaTest', 'clean-console:test']);
   grunt.registerTask('default', ['deps-ok', 'nice-package', 'lint', 'sync', 'browserify', 'test']);
 };

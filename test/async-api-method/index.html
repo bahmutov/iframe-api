@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+<head>
+  <meta charset="utf-8">
+  <title>Calling async api method</title>
+  <script src="../../bower_components/es5-shim/es5-shim.js"></script>
+</head>
+<body>
+    <h2>calling async iframe api method</h2>
+
+    <button id="btn" style="display:none">Call async iframe API method</button>
+
+    <script src="../../node_modules/console-log-div/console-log-div.js"></script>
+
+    <script src="../../dist/iframe-api.js"></script>
+
+    <script>
+    (function iframeApiHandshake(iframeApi) {
+
+      if (typeof iframeApi !== 'function') {
+        throw new Error('Missing iframeApi function');
+      }
+
+      function showButton(api, callback) {
+        var btn = document.getElementById('btn');
+        btn.addEventListener('click', function () {
+          console.log('button clicked, calling async iframe method');
+          callback();
+        });
+        btn.style.display = '';
+      }
+
+      function connected(api) {
+        console.log('received api from iframe with version', api.version);
+        console.log('api methods:', Object.keys(api));
+
+        function testAsyncCall() {
+          var msg = 'hello iframe';
+          api.echo(msg).then(function (response) {
+            console.log('received response', JSON.stringify(response));
+            if (response !== msg) {
+              console.error('Wrong response');
+              console.log('throw error');
+              throw new Error('Wrong response from iframe echo ' + response);
+            }
+          });
+        }
+
+        showButton(api, testAsyncCall);
+        // test it right away
+        testAsyncCall();
+      }
+
+      function error(err) {
+        throw new Error('iframeApi error ' + err);
+      }
+
+      iframeApi().then(connected, error);
+    }(window.iframeApi));
+    </script>
+
+    <iframe id="page" src="page.html" width="100%" height="500"></iframe>
+
+</body>
+</html>
