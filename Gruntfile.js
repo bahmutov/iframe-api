@@ -109,7 +109,6 @@ module.exports = function (grunt) {
   plugins.forEach(grunt.loadNpmTasks);
 
   grunt.registerTask('lint', ['filenames', 'jshint', 'eslint', 'jscs']);
-  // do not execute all clean-console tasks until async api method calls are working
-  grunt.registerTask('test', ['mochaTest', 'clean-console:test']);
+  grunt.registerTask('test', ['mochaTest', 'clean-console']);
   grunt.registerTask('default', ['deps-ok', 'nice-package', 'lint', 'sync', 'browserify', 'test']);
 };

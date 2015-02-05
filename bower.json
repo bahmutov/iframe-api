@@ -1,6 +1,6 @@
 {
   "name": "iframe-api",
-  "version": "0.8.3",
+  "version": "0.9.0",
   "description": "Bidirectional API communication between external and iframed websites",
   "license": "MIT",
   "homepage": "https://github.com/bahmutov/iframe-api",

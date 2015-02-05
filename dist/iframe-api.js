@@ -1188,7 +1188,7 @@ var iframeApi = function iframeApi(myApi, userOptions) {
       var method = params.myApi[cmd];
       if (typeof method === 'function') {
         var result = method.apply(params.myApi, args);
-        log('method', cmd, 'result', JSON.stringify(result));
+        // log('method', cmd, 'result', JSON.stringify(result));
         return result;
       } else {
         log('unknown command', cmd, 'from the parent');
@@ -1212,12 +1212,26 @@ var iframeApi = function iframeApi(myApi, userOptions) {
       }
     }
 
+    function isPromise(x) {
+      return x && typeof x.then === 'function';
+    }
+
+    function respond(port, envelope, result) {
+      selfAddressed(envelope, result);
+      selfAddressed(apiMethods.post, port, envelope);
+    }
+
     function respondToMail(envelope, port) {
       var letter = selfAddressed(envelope);
       console.log('responding to letter', JSON.stringify(letter));
       var result = callApiMethod(letter);
-      selfAddressed(envelope, result);
-      selfAddressed(apiMethods.post, port, envelope);
+      if (isPromise(result)) {
+        result.then(function (value) {
+          respond(port, envelope, value);
+        });
+      } else {
+        respond(port, envelope, result);
+      }
     }
 
     function receiveApi(received, port) {
