@@ -71,6 +71,7 @@
 
   "globals"       : {
     "require": true,
-    "module": true
+    "module": true,
+    "Promise": true
   }
 }
