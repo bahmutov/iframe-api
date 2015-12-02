@@ -21,11 +21,11 @@
   ],
   "main": "dist/iframe-api.js",
   "keywords": [
-    "iframe",
-    "frame",
-    "website",
     "api",
     "communication",
-    "html"
+    "frame",
+    "html",
+    "iframe",
+    "website"
   ]
 }
