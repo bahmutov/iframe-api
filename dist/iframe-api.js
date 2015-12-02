@@ -1150,7 +1150,7 @@ module.exports = stamp;
 require('es6-promise').polyfill();
 
 function isIframed() {
-  return parent !== window;
+  return parent !== window && !window.iFrameApiParent;
 }
 
 var apiMethods = require('./lib/api-methods');

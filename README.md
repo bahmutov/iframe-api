@@ -17,8 +17,22 @@ Available on NPM and bower under name `iframe-api`.
 **external website** (index.html)
 
 ```html
-<script src="iframe-api/dist/external-api.js"></script>
+<script src="iframe-api/dist/iframe-api.js"></script>
 <script>
+
+/*
+The iframe-api.js does an isIframed() check
+to see if it is the parent or the child frame
+and then decides it's functionality.
+
+In most environments, the external index.html
+is the top-level document, but in edge-cases
+where the index.html is itself iframed by another
+parent document, we want to explicitly specify that
+this is the parent frame for the iframeApi
+*/
+//window.iFrameApiParent = true;
+
 var myMethods = {
   foo: function (arg) {
     console.log('myMethods.foo called wtih argument', arg);
