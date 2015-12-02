@@ -9,6 +9,7 @@
 [![Build status][iframe-api-ci-image] ][iframe-api-ci-url]
 [![dependencies][iframe-api-dependencies-image] ][iframe-api-dependencies-url]
 [![devdependencies][iframe-api-devdependencies-image] ][iframe-api-devdependencies-url]
+[![semantic-release][semantic-image] ][semantic-url]
 
 Available on NPM and bower under name `iframe-api`.
 
@@ -104,8 +105,8 @@ var myApi = {
 
 * options - optional object with the following properties
   - `debug | verbose` prints console messages during handshake
-  - `md5` 
-    + if `true` this side will compute md5 checksum of the 
+  - `md5`
+    + if `true` this side will compute md5 checksum of the
     received source and compare to declared before reviving api object.
     + if a string, takes it as the md5 checksum to be compared against computed.
 
@@ -137,7 +138,7 @@ Author: Gleb Bahmutov &copy; 2015
 
 * [@bahmutov](https://twitter.com/bahmutov)
 * [glebbahmutov.com](http://glebbahmutov.com)
-* [blog](http://bahmutov.calepin.co/)
+* [blog](http://glebbahmutov.com/blog)
 
 License: MIT - do anything with the code, but don't blame me if it does not work.
 
@@ -179,3 +180,5 @@ OTHER DEALINGS IN THE SOFTWARE.
 [iframe-api-dependencies-url]: https://david-dm.org/bahmutov/iframe-api
 [iframe-api-devdependencies-image]: https://david-dm.org/bahmutov/iframe-api/dev-status.png
 [iframe-api-devdependencies-url]: https://david-dm.org/bahmutov/iframe-api#info=devDependencies
+[semantic-image]: https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg
+[semantic-url]: https://github.com/semantic-release/semantic-release
