@@ -10,7 +10,7 @@
     "pre-git": {
       "commit-msg": "validate-commit-msg",
       "pre-commit": [
-        "grunt"
+        "npm run test"
       ],
       "pre-push": [],
       "post-commit": [],
@@ -28,6 +28,7 @@
     "grunt": "0.4.5",
     "grunt-browserify": "4.0.1",
     "grunt-clean-console": "0.2.0",
+    "grunt-cli": "0.1.13",
     "grunt-contrib-jshint": "0.11.3",
     "grunt-contrib-watch": "0.6.1",
     "grunt-deps-ok": "0.9.0",
