@@ -4,8 +4,7 @@
 
 [Demo](http://glebbahmutov.com/iframe-api/)
 
-[![NPM][iframe-api-icon] ][iframe-api-url]
-
+[![npm version](https://badge.fury.io/js/iframe-api.svg)](https://badge.fury.io/js/iframe-api)
 [![Build status][iframe-api-ci-image] ][iframe-api-ci-url]
 [![dependencies][iframe-api-dependencies-image] ][iframe-api-dependencies-url]
 [![devdependencies][iframe-api-devdependencies-image] ][iframe-api-devdependencies-url]
